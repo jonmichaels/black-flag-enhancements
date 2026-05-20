@@ -38,6 +38,21 @@ All settings are under **Configure Settings** → **Black Flag Enhancements**.
 | Enable | Boolean | On | Toggle the paused overlay replacement |
 | Image | Dropdown | Black Flag Icon | Choose between the Black Flag icon and Tales of the Valiant mark (if ToV module is installed) |
 
+## How It Works
+
+### Game Paused Overlay
+
+When the game is paused, the default Foundry clock icon is replaced with a themed image that slowly pulses with a backlight. Inspired by the same feature in the D&D 5E system.
+
+- **Black Flag Icon**: The green and gold Black Flag emblem (included, 145px height)
+- **Tales of the Valiant Mark**: The white ToV infinity mark on black circular background, sourced from the Kobold Press ToV Player's Guide module (170px height, only selectable when that module is active)
+
+## Credits
+
+- **D&D 5E system** — reference for the pause overlay rendering pattern (`renderGamePause` hook + CSS pulsate)
+- **Kobold Press ToV Player's Guide module** — source of the optional Tales of the Valiant mark image
+- **This module** — by Jon Michaels, coded by Hephaestus (AI agent via Hermes Agent)
+
 ## License
 
 MIT
