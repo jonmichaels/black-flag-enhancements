@@ -47,7 +47,7 @@ Hooks.on("renderGamePause", (app, html) => {
     const imageChoice = game.settings.get(MODULE_ID, "pause-overlay-image");
     const imgSrc = (imageChoice === "tov-mark" && tovInstalled)
         ? "modules/kp-tov-players-guide/assets/furniture/ToV-Mark.webp"
-        : `modules/${MODULE_ID}/black_flag_icon.webp`;
+        : `modules/${MODULE_ID}/assets/black_flag_icon.webp`;
 
     // Add our CSS class to the figure
     html.classList.add("bfe-pause");
