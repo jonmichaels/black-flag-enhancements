@@ -1,0 +1,41 @@
+{
+    "id": "black-flag-enhancements",
+    "title": "Black Flag Enhancements",
+    "description": "A collection of quality-of-life tweaks and UI enhancements for the Black Flag Roleplaying / Tales of the Valiant system.",
+    "version": "0.1.0",
+    "authors": [
+        {
+            "name": "Jon Michaels",
+            "discord": "jonmichaels#9614",
+            "url": "https://github.com/jonmichaels"
+        }
+    ],
+    "esmodules": [
+        "dist/module.js"
+    ],
+    "styles": [
+        "dist/module.css"
+    ],
+    "compatibility": {
+        "minimum": "13",
+        "verified": "13",
+        "maximum": "14"
+    },
+    "relationships": {
+        "systems": [
+            {
+                "id": "black-flag",
+                "type": "system",
+                "compatibility": {
+                    "minimum": "2.0.0",
+                    "verified": "2.0.074"
+                }
+            }
+        ]
+    },
+    "url": "https://github.com/jonmichaels/black-flag-enhancements",
+    "manifest": "https://github.com/jonmichaels/black-flag-enhancements/releases/latest/download/module.json",
+    "download": "https://github.com/jonmichaels/black-flag-enhancements/releases/latest/download/module.zip",
+    "license": "MIT",
+    "readme": "README.md"
+}
