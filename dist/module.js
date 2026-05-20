@@ -1,11 +1,11 @@
 // ─── Black Flag Enhancements ───
 const MODULE_ID = "black-flag-enhancements";
-
-// Check if the Kobold Press ToV Player's Guide module is installed
-const tovInstalled = game.modules.get("kp-tov-players-guide")?.active ?? false;
+let tovInstalled = false;  // set during init when game is available
 
 // ─── Register settings ───
 Hooks.once("init", () => {
+    tovInstalled = game.modules.get("kp-tov-players-guide")?.active ?? false;
+
     // Pause overlay: enable/disable
     game.settings.register(MODULE_ID, "pause-overlay-enabled", {
         name: "Game Paused Overlay",
@@ -38,7 +38,6 @@ Hooks.on("renderGamePause", (app, html) => {
     if (!game.settings.get(MODULE_ID, "pause-overlay-enabled")) return;
 
     // Skip if another module/system already modified the overlay
-    // (only apply if we're the only custom hook besides Foundry's default)
     const ourHooks = Hooks.events.renderGamePause.filter(
         h => h.toString().includes(MODULE_ID)
     );
@@ -50,10 +49,10 @@ Hooks.on("renderGamePause", (app, html) => {
         ? "modules/kp-tov-players-guide/assets/furniture/ToV-Mark.webp"
         : `modules/${MODULE_ID}/black_flag_icon.webp`;
 
-    // Add our CSS class
+    // Add our CSS class to the figure
     html.classList.add("bfe-pause");
 
-    // Wrap content (matches dnd5e pattern: flex container for centering + animation)
+    // Restructure DOM (matches dnd5e pattern)
     const container = document.createElement("div");
     container.className = "flexcol bfe-pause-container";
     container.append(...html.children);
@@ -61,6 +60,8 @@ Hooks.on("renderGamePause", (app, html) => {
 
     // Replace clock icon with our image
     const img = html.querySelector("img");
-    img.src = imgSrc;
-    img.className = "bfe-pause-img";
+    if (img) {
+        img.src = imgSrc;
+        img.className = "bfe-pause-img";
+    }
 });
