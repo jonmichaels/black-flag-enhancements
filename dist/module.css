@@ -26,7 +26,7 @@
 
 .bfe-pause#pause figcaption {
     color: var(--color-text-light-0);
-    font-size: var(--font-size-52);
+    font-size: 3rem;
     text-shadow: 2px 2px 2px var(--color-shadow-dark);
     font-weight: bold;
     letter-spacing: 2px;
