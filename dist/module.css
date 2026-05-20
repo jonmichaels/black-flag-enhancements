@@ -24,6 +24,10 @@
     object-fit: contain;
 }
 
+.bfe-pause#pause .bfe-pause-img-tov {
+    height: 170px;
+}
+
 .bfe-pause#pause figcaption {
     color: var(--color-text-light-0);
     font-size: 3rem;

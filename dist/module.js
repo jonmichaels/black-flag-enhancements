@@ -62,6 +62,8 @@ Hooks.on("renderGamePause", (app, html) => {
     const img = html.querySelector("img");
     if (img) {
         img.src = imgSrc;
-        img.className = "bfe-pause-img";
+        img.className = imageChoice === "tov-mark" && tovInstalled
+            ? "bfe-pause-img bfe-pause-img-tov"
+            : "bfe-pause-img";
     }
 });
