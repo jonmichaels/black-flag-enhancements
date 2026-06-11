@@ -1,4 +1,5 @@
 import { linesToHtml, makeDescription, escapeHTML } from "./html.js";
+import { commonTraitEnhancement } from "./common-traits.js";
 
 const TRAIT_SKIP = new Set(["age", "size", "speed"]);
 
@@ -84,11 +85,13 @@ function slugify(value = "") {
 }
 
 function featureItem(trait, lineageName) {
+  const enhancement = commonTraitEnhancement(trait);
   return baseItem(trait.name, "feature", linesToHtml([trait.text], { traitStyle: false }), {
     identifier: { associated: slugify(lineageName), value: slugify(trait.name) },
     type: { category: "lineage", value: "" },
-    source: lineageName
-  }, FEATURE_ICON);
+    source: lineageName,
+    ...(enhancement.system ?? {})
+  }, enhancement.img ?? FEATURE_ICON);
 }
 
 function parseSizeOptions(text = "") {

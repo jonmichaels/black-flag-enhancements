@@ -12,7 +12,7 @@ describe("concept parsers", () => {
     expect(result.primary.system.description.value).toContain("<h4>Dhampir Lineage Traits</h4>");
     expect(result.primary.system.advancement.bfeSize000000000.configuration.options).toEqual(["small", "medium"]);
     expect(result.primary.system.description.value).toContain("<em><strong>Size.</strong></em> Your size is Medium or Small.");
-    expect(result.related.map(i => i.img)).toEqual(["systems/black-flag/artwork/types/feature.svg", "systems/black-flag/artwork/types/feature.svg"]);
+    expect(result.related.map(i => i.img)).toEqual(["icons/creatures/eyes/humanoid-single-blind.webp", "systems/black-flag/artwork/types/feature.svg"]);
     expect(result.related.map(i => i.type)).toEqual(["feature", "feature"]);
     expect(result.related.map(i => i.name)).toEqual(["Darkvision", "Bite"]);
     expect(result.related.map(i => i.system.type.category)).toEqual(["lineage", "lineage"]);
@@ -64,6 +64,26 @@ by rubble or uneven stone.`);
     const result = parseInput("lineage", `swift folk\nQuick and curious.\nSwift Folk Lineage Traits\nAge. You age normally.\nSize. Your size is Medium.\nSpeed. Your speed is 30 feet.\nLanguages. You speak Common and one other language.\nCreature Type. You are a Humanoid.`);
     expect(result.related.map(i => i.name)).toEqual(["Languages", "Creature Type"]);
     expect(result.primary.system.advancement.bfeSize000000000.configuration.options).toEqual(["medium"]);
+  });
+
+  it("creates darkvision lineage features with property advancement", () => {
+    const result = parseInput("lineage", `night folk\nNight folk see in darkness.\nNight Folk Lineage Traits\nAge. You age normally.\nSize. Your size is Medium.\nSpeed. Your speed is 30 feet.\nDarkvision. You have darkvision to a range of 60 feet.`);
+    const darkvision = result.related.find(i => i.name === "Darkvision");
+    expect(darkvision.img).toBe("icons/creatures/eyes/humanoid-single-blind.webp");
+    const advancement = Object.values(darkvision.system.advancement)[0];
+    expect(advancement.type).toBe("property");
+    expect(advancement.title).toBe("Darkvision");
+    expect(advancement.hint).toBe("You have darkvision to a range of 60 feet.");
+    expect(advancement.configuration.changes).toEqual([{ key: "system.traits.senses.types.darkvision", mode: 4, value: "60" }]);
+    expect(result.primary.system.description.value).toContain("<em><strong>Darkvision.</strong></em> You have darkvision to a range of 60 feet.");
+  });
+
+  it("detects superior darkvision distance for reusable darkvision trait parsing", () => {
+    const result = parseInput("lineage", `deep folk\nDeep folk live below.\nDeep Folk Lineage Traits\nAge. You age normally.\nSize. Your size is Medium.\nSpeed. Your speed is 30 feet.\nSuperior Darkvision. You have darkvision to a range of 120 feet.`);
+    const darkvision = result.related.find(i => i.name === "Superior Darkvision");
+    expect(darkvision.img).toBe("icons/creatures/eyes/humanoid-single-blind.webp");
+    const advancement = Object.values(darkvision.system.advancement)[0];
+    expect(advancement.configuration.changes[0].value).toBe("120");
   });
 
   it("parses small-only lineage size advancement", () => {

@@ -105,6 +105,48 @@ function makeDescription(html) {
   return { value: html || "", chat: "", unidentified: "" };
 }
 
+// src/parser/common-traits.js
+var DARKVISION_ICON = "icons/creatures/eyes/humanoid-single-blind.webp";
+var DARKVISION_ADVANCEMENT_ID = "bfeDarkvision000";
+var DARKVISION_KEY = "system.traits.senses.types.darkvision";
+var MODE_UPGRADE = 4;
+function darkvisionDistance(text = "") {
+  const match = String(text).match(/\b(\d{2,3})\s*(?:feet|ft\.?)/i);
+  return match?.[1] ?? null;
+}
+function darkvisionEnhancement(trait) {
+  if (!/\bdarkvision\b/i.test(trait?.name ?? "")) return null;
+  const value = darkvisionDistance(trait.text);
+  if (!value) return null;
+  return {
+    img: DARKVISION_ICON,
+    system: {
+      advancement: {
+        [DARKVISION_ADVANCEMENT_ID]: {
+          _id: DARKVISION_ADVANCEMENT_ID,
+          configuration: {
+            changes: [{ key: DARKVISION_KEY, mode: MODE_UPGRADE, value }]
+          },
+          flags: {},
+          hint: trait.text,
+          icon: null,
+          level: { value: 0, classIdentifier: "" },
+          title: trait.name,
+          type: "property"
+        }
+      }
+    }
+  };
+}
+var COMMON_TRAIT_ENHANCERS = [darkvisionEnhancement];
+function commonTraitEnhancement(trait) {
+  for (const enhance of COMMON_TRAIT_ENHANCERS) {
+    const result = enhance(trait);
+    if (result) return result;
+  }
+  return {};
+}
+
 // src/parser/concept-parsers.js
 var TRAIT_SKIP = /* @__PURE__ */ new Set(["age", "size", "speed"]);
 function toTitleCase(value = "") {
@@ -174,11 +216,13 @@ function slugify(value = "") {
   return String(value).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 function featureItem(trait, lineageName) {
+  const enhancement = commonTraitEnhancement(trait);
   return baseItem(trait.name, "feature", linesToHtml([trait.text], { traitStyle: false }), {
     identifier: { associated: slugify(lineageName), value: slugify(trait.name) },
     type: { category: "lineage", value: "" },
-    source: lineageName
-  }, FEATURE_ICON);
+    source: lineageName,
+    ...enhancement.system ?? {}
+  }, enhancement.img ?? FEATURE_ICON);
 }
 function parseSizeOptions(text = "") {
   const normalized = String(text).toLowerCase();
