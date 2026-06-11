@@ -8,8 +8,9 @@ const samples = {
   gear: `${SENTINEL} Gear\nMagic Item\nA useful item.`
 };
 
-const pack = [...game.packs].map(([,p]) => p).find(p => p.documentName === "Item" && p.metadata.label === "Parser Test Items");
-if (!pack) return { ok: false, world: game.world.id, system: game.system.id, error: "Parser Test Items pack not found", itemPacks: [...game.packs].map(([id,p]) => ({ id, label: p.metadata.label, type: p.documentName, locked: p.locked })) };
+const packs = Array.from(game.packs);
+const pack = packs.find(p => p.documentName === "Item" && p.metadata.label === "Parser Test Items");
+if (!pack) return { ok: false, world: game.world.id, system: game.system.id, error: "Parser Test Items pack not found", itemPacks: packs.map(p => ({ id: p.metadata.id, label: p.metadata.label, type: p.documentName, locked: p.locked })) };
 const mod = await import(`/modules/black-flag-enhancements/dist/module.js?smoke=${Date.now()}`);
 const out = { ok: true, world: game.world.id, system: game.system.id, active: game.modules.get("black-flag-enhancements")?.active, pack: pack.metadata.id, created: {} };
 for (const [type, input] of Object.entries(samples)) {
