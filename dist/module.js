@@ -311,10 +311,10 @@ var PARSER_TYPES = {
   container: { label: "BF.Item.Type.Container[one]", fallbackLabel: "Container", group: "BFE.Parser.MagicItem", groupFallback: "Magic Item", template: `modules/${MODULE_ID}/templates/parser/types/magic-item-output.hbs` },
   gear: { label: "BF.Item.Gear.Category.WondrousItem[one]", fallbackLabel: "Wondrous Item", group: "BFE.Parser.MagicItem", groupFallback: "Magic Item", template: `modules/${MODULE_ID}/templates/parser/types/magic-item-output.hbs` },
   staff: { label: "BF.Item.Gear.Category.Staff[one]", fallbackLabel: "Staff", group: "BFE.Parser.MagicItem", groupFallback: "Magic Item", template: `modules/${MODULE_ID}/templates/parser/types/magic-item-output.hbs` },
-  lineage: { label: "BFE.Parser.Type.Lineage", fallbackLabel: "Lineage", group: "BFE.Parser.Concept", groupFallback: "Concept", template: `modules/${MODULE_ID}/templates/parser/types/concept-output.hbs` },
-  heritage: { label: "BFE.Parser.Type.Heritage", fallbackLabel: "Heritage", group: "BFE.Parser.Concept", groupFallback: "Concept", template: `modules/${MODULE_ID}/templates/parser/types/concept-output.hbs` },
-  background: { label: "BFE.Parser.Type.Background", fallbackLabel: "Background", group: "BFE.Parser.Concept", groupFallback: "Concept", template: `modules/${MODULE_ID}/templates/parser/types/concept-output.hbs` },
-  talent: { label: "BFE.Parser.Type.Talent", fallbackLabel: "Talent", group: "BFE.Parser.Concept", groupFallback: "Concept", template: `modules/${MODULE_ID}/templates/parser/types/talent-output.hbs` }
+  lineage: { label: "BFE.Parser.Type.Lineage", fallbackLabel: "Lineage", group: "BFE.Parser.Character", groupFallback: "Character", template: `modules/${MODULE_ID}/templates/parser/types/concept-output.hbs` },
+  heritage: { label: "BFE.Parser.Type.Heritage", fallbackLabel: "Heritage", group: "BFE.Parser.Character", groupFallback: "Character", template: `modules/${MODULE_ID}/templates/parser/types/concept-output.hbs` },
+  background: { label: "BFE.Parser.Type.Background", fallbackLabel: "Background", group: "BFE.Parser.Character", groupFallback: "Character", template: `modules/${MODULE_ID}/templates/parser/types/concept-output.hbs` },
+  talent: { label: "BFE.Parser.Type.Talent", fallbackLabel: "Talent", group: "BFE.Parser.Character", groupFallback: "Character", template: `modules/${MODULE_ID}/templates/parser/types/talent-output.hbs` }
 };
 function firstTitle(lines) {
   return lines.find((l) => /^[A-Z][\w'’ -]{2,80}$/.test(l)) || "Untitled";
@@ -378,6 +378,18 @@ function parseInput(type, input) {
 // src/parser/parsing-application.js
 var { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 var FEATURES_ADVANCEMENT_ID = "bfeFeatures00000";
+var PARSER_SOURCES = [
+  { value: "", label: "No Source" },
+  { value: "KP-LH1", label: "KP-LH1 \u2014 Lineages & Heritages Supplement 1" },
+  { value: "KP-MLH", label: "KP-MLH \u2014 Midgard Lineages & Heritages" },
+  { value: "KP-PG2", label: "KP-PG2 \u2014 KP Player's Guide 2" },
+  { value: "KP-NW", label: "KP-NW \u2014 KP Northlands Worldbook" },
+  { value: "KP-NS", label: "KP-NS \u2014 KP Northlands Sagas" },
+  { value: "KP-DR", label: "KP-DR \u2014 KP Dungeons & Ruins" },
+  { value: "KP-TOM", label: "KP-TOM \u2014 KP The Old Margreve" },
+  { value: "KP-LW", label: "KP-LW \u2014 KP Labyrinth Worldbook" },
+  { value: "KP-LA", label: "KP-LA \u2014 KP Labyrinth Adventures" }
+];
 function localizeLabel(key, fallback = key) {
   const localized = game.i18n.localize(key);
   return localized === key ? fallback : localized;
@@ -401,6 +413,17 @@ function previewDescription(item2) {
     html = html.replace(/@Embed\[\.Advancement\.bfeSize000000000 inline\]\{Size\}/g, `<em><strong>Size.</strong></em> ${text}`);
   }
   return html;
+}
+function sourceOptions(selected = "") {
+  return PARSER_SOURCES.map((option) => ({ ...option, selected: selected === option.value }));
+}
+function applySource(data, source) {
+  const item2 = foundry.utils.deepClone(data);
+  item2.system ??= {};
+  item2.system.description ??= {};
+  item2.system.description.source ??= {};
+  item2.system.description.source.book = source;
+  return item2;
 }
 var ParsingApplication = class _ParsingApplication extends HandlebarsApplicationMixin(ApplicationV2) {
   static TYPES = PARSER_TYPES;
@@ -435,6 +458,7 @@ var ParsingApplication = class _ParsingApplication extends HandlebarsApplication
   async _prepareContext(options) {
     const context = await super._prepareContext(options);
     const lastFolder = game.user.getFlag(MODULE_ID, "lastParserFolder");
+    const lastSource = game.user.getFlag(MODULE_ID, "lastParserSource") ?? "";
     return {
       ...context,
       input: this._input,
@@ -443,6 +467,10 @@ var ParsingApplication = class _ParsingApplication extends HandlebarsApplication
       types: {
         field: new foundry.data.fields.StringField(),
         options: optionGroups(this.constructor.TYPES, this._type)
+      },
+      sources: {
+        field: new foundry.data.fields.StringField(),
+        options: sourceOptions(lastSource)
       },
       folders: {
         field: new foundry.data.fields.StringField(),
@@ -495,20 +523,22 @@ var ParsingApplication = class _ParsingApplication extends HandlebarsApplication
     app._type = formData.object.type || app.type;
     app.#parse();
     if (!app.result) return app.render();
-    const created = await app.saveResult(app.result, formData.object.folder || null);
+    const source = formData.object.source ?? "";
+    const created = await app.saveResult(app.result, formData.object.folder || null, source);
     await game.user.setFlag(MODULE_ID, "lastParserType", app._type);
+    await game.user.setFlag(MODULE_ID, "lastParserSource", source);
     if (formData.object.folder !== void 0) await game.user.setFlag(MODULE_ID, "lastParserFolder", formData.object.folder);
     ui.notifications.info(`Created ${created.name}!`);
     created?.sheet?.render(true);
   }
-  async saveResult(result, folder = null) {
+  async saveResult(result, folder = null, source = "") {
     const packId = this.pack.metadata.id;
     const related = [];
     for (const data of result.related ?? []) {
-      const [created] = await Item.createDocuments([{ ...data, folder }], { pack: packId });
+      const [created] = await Item.createDocuments([{ ...applySource(data, source), folder }], { pack: packId });
       related.push(created);
     }
-    const primary = foundry.utils.deepClone(result.primary);
+    const primary = applySource(result.primary, source);
     if (related.length && primary.type === "lineage") {
       primary.system ??= {};
       primary.system.advancement ??= {};

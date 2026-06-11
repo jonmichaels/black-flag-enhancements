@@ -4,6 +4,18 @@ import { escapeHTML } from "./html.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const FEATURES_ADVANCEMENT_ID = "bfeFeatures00000";
+const PARSER_SOURCES = [
+  { value: "", label: "No Source" },
+  { value: "KP-LH1", label: "KP-LH1 — Lineages & Heritages Supplement 1" },
+  { value: "KP-MLH", label: "KP-MLH — Midgard Lineages & Heritages" },
+  { value: "KP-PG2", label: "KP-PG2 — KP Player's Guide 2" },
+  { value: "KP-NW", label: "KP-NW — KP Northlands Worldbook" },
+  { value: "KP-NS", label: "KP-NS — KP Northlands Sagas" },
+  { value: "KP-DR", label: "KP-DR — KP Dungeons & Ruins" },
+  { value: "KP-TOM", label: "KP-TOM — KP The Old Margreve" },
+  { value: "KP-LW", label: "KP-LW — KP Labyrinth Worldbook" },
+  { value: "KP-LA", label: "KP-LA — KP Labyrinth Adventures" }
+];
 
 function localizeLabel(key, fallback = key) {
   const localized = game.i18n.localize(key);
@@ -31,6 +43,19 @@ function previewDescription(item) {
     html = html.replace(/@Embed\[\.Advancement\.bfeSize000000000 inline\]\{Size\}/g, `<em><strong>Size.</strong></em> ${text}`);
   }
   return html;
+}
+
+function sourceOptions(selected = "") {
+  return PARSER_SOURCES.map(option => ({ ...option, selected: selected === option.value }));
+}
+
+function applySource(data, source) {
+  const item = foundry.utils.deepClone(data);
+  item.system ??= {};
+  item.system.description ??= {};
+  item.system.description.source ??= {};
+  item.system.description.source.book = source;
+  return item;
 }
 
 export class ParsingApplication extends HandlebarsApplicationMixin(ApplicationV2) {
@@ -72,6 +97,7 @@ export class ParsingApplication extends HandlebarsApplicationMixin(ApplicationV2
   async _prepareContext(options) {
     const context = await super._prepareContext(options);
     const lastFolder = game.user.getFlag(MODULE_ID, "lastParserFolder");
+    const lastSource = game.user.getFlag(MODULE_ID, "lastParserSource") ?? "";
     return {
       ...context,
       input: this._input,
@@ -80,6 +106,10 @@ export class ParsingApplication extends HandlebarsApplicationMixin(ApplicationV2
       types: {
         field: new foundry.data.fields.StringField(),
         options: optionGroups(this.constructor.TYPES, this._type)
+      },
+      sources: {
+        field: new foundry.data.fields.StringField(),
+        options: sourceOptions(lastSource)
       },
       folders: {
         field: new foundry.data.fields.StringField(),
@@ -136,21 +166,23 @@ export class ParsingApplication extends HandlebarsApplicationMixin(ApplicationV2
     app._type = formData.object.type || app.type;
     app.#parse();
     if (!app.result) return app.render();
-    const created = await app.saveResult(app.result, formData.object.folder || null);
+    const source = formData.object.source ?? "";
+    const created = await app.saveResult(app.result, formData.object.folder || null, source);
     await game.user.setFlag(MODULE_ID, "lastParserType", app._type);
+    await game.user.setFlag(MODULE_ID, "lastParserSource", source);
     if (formData.object.folder !== undefined) await game.user.setFlag(MODULE_ID, "lastParserFolder", formData.object.folder);
     ui.notifications.info(`Created ${created.name}!`);
     created?.sheet?.render(true);
   }
 
-  async saveResult(result, folder = null) {
+  async saveResult(result, folder = null, source = "") {
     const packId = this.pack.metadata.id;
     const related = [];
     for (const data of result.related ?? []) {
-      const [created] = await Item.createDocuments([{ ...data, folder }], { pack: packId });
+      const [created] = await Item.createDocuments([{ ...applySource(data, source), folder }], { pack: packId });
       related.push(created);
     }
-    const primary = foundry.utils.deepClone(result.primary);
+    const primary = applySource(result.primary, source);
     if (related.length && primary.type === "lineage") {
       primary.system ??= {};
       primary.system.advancement ??= {};

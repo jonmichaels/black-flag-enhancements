@@ -28,6 +28,7 @@ describe("static parser contract", () => {
     expect(app).toContain("bfe-parse");
     expect(app).toContain("BFE Parser");
     expect(app).toContain("grantFeatures");
+    expect(read("src/parser/parse-input.js")).toContain('groupFallback: "Character"');
     expect(read("src/parser/common-traits.js")).toContain("system.traits.senses.types.darkvision");
     for (const type of ["lineage","heritage","background","talent","spell"]) expect(read("src/parser/parse-input.js")).toContain(`case \"${type}\"`);
   });

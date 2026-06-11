@@ -12,10 +12,10 @@ export const PARSER_TYPES = {
   container: { label: "BF.Item.Type.Container[one]", fallbackLabel: "Container", group: "BFE.Parser.MagicItem", groupFallback: "Magic Item", template: `modules/${MODULE_ID}/templates/parser/types/magic-item-output.hbs` },
   gear: { label: "BF.Item.Gear.Category.WondrousItem[one]", fallbackLabel: "Wondrous Item", group: "BFE.Parser.MagicItem", groupFallback: "Magic Item", template: `modules/${MODULE_ID}/templates/parser/types/magic-item-output.hbs` },
   staff: { label: "BF.Item.Gear.Category.Staff[one]", fallbackLabel: "Staff", group: "BFE.Parser.MagicItem", groupFallback: "Magic Item", template: `modules/${MODULE_ID}/templates/parser/types/magic-item-output.hbs` },
-  lineage: { label: "BFE.Parser.Type.Lineage", fallbackLabel: "Lineage", group: "BFE.Parser.Concept", groupFallback: "Concept", template: `modules/${MODULE_ID}/templates/parser/types/concept-output.hbs` },
-  heritage: { label: "BFE.Parser.Type.Heritage", fallbackLabel: "Heritage", group: "BFE.Parser.Concept", groupFallback: "Concept", template: `modules/${MODULE_ID}/templates/parser/types/concept-output.hbs` },
-  background: { label: "BFE.Parser.Type.Background", fallbackLabel: "Background", group: "BFE.Parser.Concept", groupFallback: "Concept", template: `modules/${MODULE_ID}/templates/parser/types/concept-output.hbs` },
-  talent: { label: "BFE.Parser.Type.Talent", fallbackLabel: "Talent", group: "BFE.Parser.Concept", groupFallback: "Concept", template: `modules/${MODULE_ID}/templates/parser/types/talent-output.hbs` }
+  lineage: { label: "BFE.Parser.Type.Lineage", fallbackLabel: "Lineage", group: "BFE.Parser.Character", groupFallback: "Character", template: `modules/${MODULE_ID}/templates/parser/types/concept-output.hbs` },
+  heritage: { label: "BFE.Parser.Type.Heritage", fallbackLabel: "Heritage", group: "BFE.Parser.Character", groupFallback: "Character", template: `modules/${MODULE_ID}/templates/parser/types/concept-output.hbs` },
+  background: { label: "BFE.Parser.Type.Background", fallbackLabel: "Background", group: "BFE.Parser.Character", groupFallback: "Character", template: `modules/${MODULE_ID}/templates/parser/types/concept-output.hbs` },
+  talent: { label: "BFE.Parser.Type.Talent", fallbackLabel: "Talent", group: "BFE.Parser.Character", groupFallback: "Character", template: `modules/${MODULE_ID}/templates/parser/types/talent-output.hbs` }
 };
 
 function firstTitle(lines) { return lines.find(l => /^[A-Z][\w'’ -]{2,80}$/.test(l)) || "Untitled"; }

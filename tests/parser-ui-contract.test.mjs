@@ -10,6 +10,7 @@ describe("parser UI contract", () => {
     expect(output).toContain("{{{ preview }}}");
     const footer = read("templates/parser/footer.hbs");
     expect(footer).toContain("formInput types.field");
+    expect(footer).toContain("formInput sources.field");
     expect(footer).toContain("formInput folders.field");
     expect(footer).toContain("heavy-button");
   });
@@ -22,8 +23,22 @@ describe("parser UI contract", () => {
     expect(css).toContain('[data-application-part="input"] textarea');
     expect(css).toContain('[data-application-part="output"]');
     expect(css).toContain('[data-application-part="footer"]');
+    expect(css).toContain('flex: 1 1 25%');
     expect(css).toContain("var(--bf-background-color-half-white)");
     expect(css).toContain("var(--bf-color-border-blue)");
+  });
+
+  it("offers and persists Kobold Press source choices", () => {
+    const app = read("src/parser/parsing-application.js");
+    expect(app).toContain("PARSER_SOURCES");
+    expect(app).toContain("lastParserSource");
+    expect(app).toContain('label: "No Source"');
+    expect(app).toContain('value: "KP-LH1"');
+    expect(app).toContain("Lineages & Heritages Supplement 1");
+    expect(app).toContain('value: "KP-LA"');
+    expect(app).toContain("KP Labyrinth Adventures");
+    expect(app).toContain("applySource");
+    expect(app).toContain("system.description.source.book");
   });
 
   it("does not expose raw BFE localization keys in templates or settings labels", () => {
