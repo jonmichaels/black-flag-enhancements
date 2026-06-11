@@ -14,6 +14,57 @@ describe("concept parsers", () => {
     expect(result.primary.system.description.value).toContain("@@BFE_EMBED:Darkvision@@");
   });
 
+  it("cleans messy PDF lineage paste into description paragraphs and feature traits", () => {
+    const result = parseInput("lineage", `stone born
+Children of the mountains are sturdy
+and patient. They remember old roads. Some
+settlements call them granite folk.
+STONE BORN LINEAGE TRAITS
+Age.
+Stone born mature at the same rate as humans
+and live about a century.
+Size.
+Your size is Medium or Small.
+Speed.
+Your base walking speed is 30 feet.
+Mountain Lore.
+You gain proficiency in History
+checks related to stonework and mountains.
+Sure Footed.
+You ignore difficult terrain caused
+by rubble or uneven stone.`);
+    const description = result.primary.system.description.value;
+    expect(result.primary.name).toBe("Stone Born");
+    expect(description).toContain("<p>Children of the mountains are sturdy and patient.</p>");
+    expect(description).toContain("<p>They remember old roads.</p>");
+    expect(description).toContain("<p>Some settlements call them granite folk.</p>");
+    expect(description).toContain("<h5>Lineage Traits</h5>");
+    expect(description).toContain("<em><strong>Age.</strong></em> Stone born mature at the same rate as humans and live about a century.");
+    expect(description).toContain("<em><strong>Mountain Lore.</strong></em> @@BFE_EMBED:Mountain Lore@@");
+    expect(result.related.map(i => i.name)).toEqual(["Mountain Lore", "Sure Footed"]);
+    expect(result.related[0].system.description.value).toContain("You gain proficiency in History checks related to stonework and mountains.");
+  });
+
+  it("accepts lineage traits marker across split pastes and capitalization", () => {
+    const result = parseInput("lineage", `half giant\nLarge travelers cross deserts\nand open plains.\n\nhalf giant lineage traits\nAge. You age normally.\nSize. Your size is Medium.\nSpeed. Your speed is 30 feet.\nPowerful Build. You count as one size larger\nwhen determining carrying capacity.`);
+    expect(result.primary.name).toBe("Half Giant");
+    expect(result.primary.system.description.value).toContain("Large travelers cross deserts and open plains.");
+    expect(result.related.map(i => i.name)).toEqual(["Powerful Build"]);
+  });
+
+  it("only keeps age size and speed out of related lineage features", () => {
+    const result = parseInput("lineage", `swift folk\nQuick and curious.\nSwift Folk Lineage Traits\nAge. You age normally.\nSize. Your size is Medium.\nSpeed. Your speed is 30 feet.\nLanguages. You speak Common and one other language.\nCreature Type. You are a Humanoid.`);
+    expect(result.related.map(i => i.name)).toEqual(["Languages", "Creature Type"]);
+  });
+
+  it("preserves prose as description when lineage traits marker is missing", () => {
+    const result = parseInput("lineage", `river kin\nRiver kin live along broad waterways\nand trade with everyone. They prize hospitality.`);
+    expect(result.primary.name).toBe("River Kin");
+    expect(result.primary.system.description.value).toContain("<p>River kin live along broad waterways and trade with everyone.</p>");
+    expect(result.primary.system.description.value).toContain("<p>They prize hospitality.</p>");
+    expect(result.related).toEqual([]);
+  });
+
   it("parses heritage/background/talent as valid Black Flag item types", () => {
     expect(parseInput("heritage", "Aerobat\nYou are at home in high places.\nDescender. You can slow your fall.").primary.type).toBe("heritage");
     expect(parseInput("background", "Vampire Hunter\nYou hunt creatures of the night.\nSkill Proficiencies: Choose two.\nEquipment: A stake.\nTalent: Choose one martial talent.").primary.type).toBe("background");

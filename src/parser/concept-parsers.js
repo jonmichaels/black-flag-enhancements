@@ -1,6 +1,25 @@
 import { linesToHtml, makeDescription, escapeHTML } from "./html.js";
 
-const TRAIT_SKIP = new Set(["age", "size", "speed", "languages", "language", "ability score increase", "creature type"]);
+const TRAIT_SKIP = new Set(["age", "size", "speed"]);
+
+function toTitleCase(value = "") {
+  return String(value).trim().toLowerCase().replace(/\b[\p{L}\p{N}'’]+/gu, word => word.charAt(0).toUpperCase() + word.slice(1));
+}
+
+function normalizeInlineText(lines = []) {
+  return lines.map(l => String(l || "").trim()).filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
+}
+
+function descriptionSentences(lines = []) {
+  const text = normalizeInlineText(lines);
+  if (!text) return [];
+  return text.match(/[^.!?]+[.!?]+(?:["”’])?|[^.!?]+$/g)?.map(s => s.trim()).filter(Boolean) ?? [text];
+}
+
+function isLineageMarker(line, name) {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`^(?:${escaped}\\s+)?lineage\\s+traits$`, "i").test(String(line || "").trim());
+}
 
 export function cleanPdfText(input = "") {
   const raw = String(input).replace(/\r\n?/g, "\n").replace(/[\u00a0\t]/g, " ");
@@ -25,36 +44,54 @@ function baseItem(name, type, html, system = {}) {
   return { name, type, img: "icons/svg/book.svg", system: { description: makeDescription(html), ...system } };
 }
 
+function parseTraitStart(line) {
+  const match = String(line || "").trim().match(/^([^.:]{2,80})\.\s*(.*)$/);
+  if (!match) return null;
+  const name = match[1].trim();
+  const words = name.split(/\s+/).filter(Boolean);
+  if (words.length > 4) return null;
+  if (!/^\p{Lu}/u.test(name)) return null;
+  if (/^(and|but|or|when|while|where|because|by|with|without|you|your|the|a|an)\b/i.test(name)) return null;
+  return { name: toTitleCase(name), rest: match[2].trim() };
+}
+
 function splitTraits(lines) {
   const traits = [];
   let current = null;
   for (const line of lines) {
-    const match = line.match(/^([^.:]{2,80})\.\s+(.*)$/);
+    const match = parseTraitStart(line);
     if (match) {
-      if (current) traits.push(current);
-      current = { name: match[1].trim(), lines: [`${match[1].trim()}. ${match[2].trim()}`] };
+      if (current) traits.push({ ...current, text: normalizeInlineText(current.lines) });
+      current = { name: match.name, lines: [] };
+      if (match.rest) current.lines.push(match.rest);
     } else if (current) current.lines.push(line);
   }
-  if (current) traits.push(current);
+  if (current) traits.push({ ...current, text: normalizeInlineText(current.lines) });
   return traits;
+}
+
+function traitLine(trait) {
+  return `${trait.name}. ${trait.text}`.trim();
 }
 
 export function parseLineage(input) {
   const lines = cleanPdfText(input);
-  const { name, body } = titleFrom(lines);
-  const marker = body.findIndex(l => /^Lineage Traits$/i.test(l));
-  const before = marker >= 0 ? body.slice(0, marker) : [];
-  const traitLines = marker >= 0 ? body.slice(marker + 1) : body;
+  const name = toTitleCase(lines[0] || "Untitled");
+  const body = lines.slice(1);
+  const marker = body.findIndex(l => isLineageMarker(l, name));
+  if (marker < 0) return { primary: baseItem(name, "lineage", linesToHtml(descriptionSentences(body))), related: [] };
+  const before = body.slice(0, marker);
+  const traitLines = body.slice(marker + 1);
   const traits = splitTraits(traitLines);
   const related = [];
-  const mainBlocks = [...before, "Lineage Traits"];
+  const mainBlocks = [...descriptionSentences(before), "Lineage Traits"];
   for (const trait of traits) {
     const key = trait.name.toLowerCase();
-    if (TRAIT_SKIP.has(key)) mainBlocks.push(...trait.lines);
+    if (TRAIT_SKIP.has(key)) mainBlocks.push(traitLine(trait));
     else {
       const token = `@@BFE_EMBED:${trait.name}@@`;
       mainBlocks.push(`${trait.name}. ${token}`);
-      related.push(baseItem(trait.name, "feature", linesToHtml(trait.lines), { source: name }));
+      related.push(baseItem(trait.name, "feature", linesToHtml([traitLine(trait)]), { source: name }));
     }
   }
   let html = linesToHtml(mainBlocks).replace(/<h5>Lineage Traits<\/h5>/, "<h5>Lineage Traits</h5>");
