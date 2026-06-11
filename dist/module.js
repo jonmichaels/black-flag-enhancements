@@ -167,6 +167,16 @@ function splitTraits(lines) {
 function traitLine(trait) {
   return `${trait.name}. ${trait.text}`.trim();
 }
+function slugify(value = "") {
+  return String(value).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+function featureItem(trait, lineageName) {
+  return baseItem(trait.name, "feature", linesToHtml([trait.text], { traitStyle: false }), {
+    identifier: { associated: slugify(lineageName), value: slugify(trait.name) },
+    type: { category: "lineage", value: "" },
+    source: lineageName
+  });
+}
 function parseLineage(input) {
   const lines = cleanPdfText(input);
   const name = toTitleCase(lines[0] || "Untitled");
@@ -177,19 +187,22 @@ function parseLineage(input) {
   const traitLines = body.slice(marker + 1);
   const traits = splitTraits(traitLines);
   const related = [];
-  const mainBlocks = [...descriptionSentences(before), "Lineage Traits"];
+  const traitBlocks = [];
   for (const trait of traits) {
     const key = trait.name.toLowerCase();
-    if (TRAIT_SKIP.has(key)) mainBlocks.push(traitLine(trait));
+    if (TRAIT_SKIP.has(key)) traitBlocks.push(traitLine(trait));
     else {
       const token = `@@BFE_EMBED:${trait.name}@@`;
-      mainBlocks.push(`${trait.name}. ${token}`);
-      related.push(baseItem(trait.name, "feature", linesToHtml([traitLine(trait)]), { source: name }));
+      traitBlocks.push(token);
+      related.push(featureItem(trait, name));
     }
   }
-  let html = linesToHtml(mainBlocks).replace(/<h5>Lineage Traits<\/h5>/, "<h5>Lineage Traits</h5>");
-  html = html.replace(/<p><em><strong>([^<]+)\.<\/strong><\/em> @@BFE_EMBED:([^@]+)@@<\/p>/g, (_m, label, traitName) => `<p><em><strong>${escapeHTML(label)}.</strong></em> @@BFE_EMBED:${traitName}@@</p>`);
-  return { primary: baseItem(name, "lineage", html), related };
+  const html = [
+    linesToHtml(descriptionSentences(before)),
+    `<h4>${escapeHTML(`${name} Lineage Traits`)}</h4>`,
+    linesToHtml(traitBlocks)
+  ].filter(Boolean).join("\n");
+  return { primary: baseItem(name, "lineage", html, { identifier: { value: slugify(name) } }), related };
 }
 function parseHeritage(input) {
   const lines = cleanPdfText(input);

@@ -6,7 +6,12 @@
 	{{#if related.length}}
 		<dt>Related Features</dt>
 		{{#each related}}
-			<dd>{{ name }}</dd>
+			<dd>
+				<strong>{{ name }}</strong>
+				{{#if system.description.value}}
+					<div class="related-feature-description">{{{ system.description.value }}}</div>
+				{{/if}}
+			</dd>
 		{{/each}}
 	{{/if}}
 </dl>

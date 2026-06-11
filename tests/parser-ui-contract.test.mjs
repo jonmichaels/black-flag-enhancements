@@ -40,4 +40,10 @@ describe("parser UI contract", () => {
     expect(humanFacing).toContain("Parse Document");
     expect(humanFacing).toContain("Save");
   });
+
+  it("shows related feature descriptions in parser preview", () => {
+    const template = read("templates/parser/types/concept-output.hbs");
+    expect(template).toContain("Related Features");
+    expect(template).toMatch(/description\.value/);
+  });
 });

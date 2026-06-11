@@ -8,10 +8,13 @@ describe("concept parsers", () => {
     const result = parseInput("lineage", `Dhampir\nLineage Traits\nAge. You age normally.\nSize. Your size is Medium or Small.\nSpeed. Your base walking speed is 30 feet.\nDarkvision. You have darkvision to 60 feet.\nBite. Your fanged bite is a natural weapon.`);
     expect(result.primary.type).toBe("lineage");
     expect(result.primary.name).toBe("Dhampir");
-    expect(result.primary.system.description.value).toContain("<h5>Lineage Traits</h5>");
+    expect(result.primary.system.description.value).toContain("<h4>Dhampir Lineage Traits</h4>");
     expect(result.related.map(i => i.type)).toEqual(["feature", "feature"]);
     expect(result.related.map(i => i.name)).toEqual(["Darkvision", "Bite"]);
+    expect(result.related.map(i => i.system.type.category)).toEqual(["lineage", "lineage"]);
+    expect(result.related[0].system.description.value).not.toContain("Darkvision");
     expect(result.primary.system.description.value).toContain("@@BFE_EMBED:Darkvision@@");
+    expect(result.primary.system.description.value).not.toContain("<strong>Darkvision.");
   });
 
   it("cleans messy PDF lineage paste into description paragraphs and feature traits", () => {
@@ -38,11 +41,12 @@ by rubble or uneven stone.`);
     expect(description).toContain("<p>Children of the mountains are sturdy and patient.</p>");
     expect(description).toContain("<p>They remember old roads.</p>");
     expect(description).toContain("<p>Some settlements call them granite folk.</p>");
-    expect(description).toContain("<h5>Lineage Traits</h5>");
+    expect(description).toContain("<h4>Stone Born Lineage Traits</h4>");
     expect(description).toContain("<em><strong>Age.</strong></em> Stone born mature at the same rate as humans and live about a century.");
-    expect(description).toContain("<em><strong>Mountain Lore.</strong></em> @@BFE_EMBED:Mountain Lore@@");
+    expect(description).toContain("@@BFE_EMBED:Mountain Lore@@");
+    expect(description).not.toContain("<strong>Mountain Lore.");
     expect(result.related.map(i => i.name)).toEqual(["Mountain Lore", "Sure Footed"]);
-    expect(result.related[0].system.description.value).toContain("You gain proficiency in History checks related to stonework and mountains.");
+    expect(result.related[0].system.description.value).toBe("<p>You gain proficiency in History checks related to stonework and mountains.</p>");
   });
 
   it("accepts lineage traits marker across split pastes and capitalization", () => {
