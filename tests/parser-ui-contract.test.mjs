@@ -37,7 +37,7 @@ describe("parser UI contract", () => {
     expect(humanFacing).not.toContain("BFE.Settings.ParserEnabled.Name");
     expect(humanFacing).not.toContain("BFE.Settings.SuppressBlackFlagToolsParser.Name");
     expect(humanFacing).not.toContain("BFE.Parser.Save");
-    expect(humanFacing).toContain("Parse Document");
+    expect(humanFacing).toContain("BFE Parser");
     expect(humanFacing).toContain("Save");
   });
 

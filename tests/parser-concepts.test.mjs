@@ -8,7 +8,11 @@ describe("concept parsers", () => {
     const result = parseInput("lineage", `Dhampir\nLineage Traits\nAge. You age normally.\nSize. Your size is Medium or Small.\nSpeed. Your base walking speed is 30 feet.\nDarkvision. You have darkvision to 60 feet.\nBite. Your fanged bite is a natural weapon.`);
     expect(result.primary.type).toBe("lineage");
     expect(result.primary.name).toBe("Dhampir");
+    expect(result.primary.img).toBe("systems/black-flag/artwork/types/lineage.svg");
     expect(result.primary.system.description.value).toContain("<h4>Dhampir Lineage Traits</h4>");
+    expect(result.primary.system.advancement.bfeSize000000000.configuration.options).toEqual(["small", "medium"]);
+    expect(result.primary.system.description.value).toContain("@Embed[.Advancement.bfeSize000000000 inline]{Size}");
+    expect(result.related.map(i => i.img)).toEqual(["systems/black-flag/artwork/types/feature.svg", "systems/black-flag/artwork/types/feature.svg"]);
     expect(result.related.map(i => i.type)).toEqual(["feature", "feature"]);
     expect(result.related.map(i => i.name)).toEqual(["Darkvision", "Bite"]);
     expect(result.related.map(i => i.system.type.category)).toEqual(["lineage", "lineage"]);
@@ -59,6 +63,12 @@ by rubble or uneven stone.`);
   it("only keeps age size and speed out of related lineage features", () => {
     const result = parseInput("lineage", `swift folk\nQuick and curious.\nSwift Folk Lineage Traits\nAge. You age normally.\nSize. Your size is Medium.\nSpeed. Your speed is 30 feet.\nLanguages. You speak Common and one other language.\nCreature Type. You are a Humanoid.`);
     expect(result.related.map(i => i.name)).toEqual(["Languages", "Creature Type"]);
+    expect(result.primary.system.advancement.bfeSize000000000.configuration.options).toEqual(["medium"]);
+  });
+
+  it("parses small-only lineage size advancement", () => {
+    const result = parseInput("lineage", `tiny folk\nTiny folk hide well.\nTiny Folk Lineage Traits\nAge. You age normally.\nSize. Your size is Small.\nSpeed. Your speed is 30 feet.`);
+    expect(result.primary.system.advancement.bfeSize000000000.configuration.options).toEqual(["small"]);
   });
 
   it("preserves prose as description when lineage traits marker is missing", () => {

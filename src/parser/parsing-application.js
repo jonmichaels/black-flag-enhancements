@@ -3,6 +3,7 @@ import { parseInput, PARSER_TYPES, normalizeParseResult } from "./parse-input.js
 import { escapeHTML } from "./html.js";
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+const FEATURES_ADVANCEMENT_ID = "bfeFeatures00000";
 
 function localizeLabel(key, fallback = key) {
   const localized = game.i18n.localize(key);
@@ -22,6 +23,16 @@ async function renderDescription(html = "") {
   return TextEditor.enrichHTML(html, { secrets: true });
 }
 
+function previewDescription(item) {
+  let html = item.system?.description?.value ?? "";
+  const size = item.system?.advancement?.bfeSize000000000;
+  if (size?.hint) {
+    const text = escapeHTML(String(size.hint).replace(/^Size\.\s*/i, ""));
+    html = html.replace(/@Embed\[\.Advancement\.bfeSize000000000 inline\]\{Size\}/g, `<em><strong>Size.</strong></em> ${text}`);
+  }
+  return html;
+}
+
 export class ParsingApplication extends HandlebarsApplicationMixin(ApplicationV2) {
   static TYPES = PARSER_TYPES;
 
@@ -30,7 +41,7 @@ export class ParsingApplication extends HandlebarsApplicationMixin(ApplicationV2
     classes: ["black-flag", "black-flag-enhancements", "parser"],
     tag: "form",
     form: { handler: ParsingApplication.#onSubmit, submitOnChange: false, closeOnSubmit: true },
-    window: { title: "Parse Document", icon: "fa-solid fa-file-lines", resizable: true },
+    window: { title: "BFE Parser", icon: "fa-solid fa-file-lines", resizable: true },
     position: { width: 1024, height: 720 }
   };
 
@@ -114,7 +125,7 @@ export class ParsingApplication extends HandlebarsApplicationMixin(ApplicationV2
       item,
       result: this.result,
       related: this.result.related ?? [],
-      enriched: { description: await renderDescription(item.system?.description?.value ?? "") }
+      enriched: { description: await renderDescription(previewDescription(item)) }
     });
   }
 
@@ -142,6 +153,19 @@ export class ParsingApplication extends HandlebarsApplicationMixin(ApplicationV2
       uuidMap.set(created.name, created.uuid);
     }
     const primary = foundry.utils.deepClone(result.primary);
+    if (related.length && primary.type === "lineage") {
+      primary.system ??= {};
+      primary.system.advancement ??= {};
+      primary.system.advancement[FEATURES_ADVANCEMENT_ID] = {
+        _id: FEATURES_ADVANCEMENT_ID,
+        configuration: { enabled: true, pool: related.map(doc => ({ uuid: doc.uuid })) },
+        flags: {},
+        icon: null,
+        level: { value: 0 },
+        title: "",
+        type: "grantFeatures"
+      };
+    }
     let html = primary.system?.description?.value ?? "";
     for (const [name, uuid] of uuidMap) html = html.replaceAll(`@@BFE_EMBED:${name}@@`, `@Embed[${uuid} inline]{${escapeHTML(name)}}`);
     if (primary.system?.description) primary.system.description.value = html;
@@ -161,7 +185,7 @@ export class ParsingApplication extends HandlebarsApplicationMixin(ApplicationV2
     button.type = "button";
     button.className = "parse bfe-parse";
     button.dataset.action = "bfe-parse";
-    button.innerHTML = `<i class="fa-solid fa-file-lines" inert></i> Parse Document`;
+    button.innerHTML = `<i class="fa-solid fa-file-lines" inert></i> BFE Parser`;
     button.addEventListener("click", event => {
       event.preventDefault();
       new this({ pack }).render({ force: true });

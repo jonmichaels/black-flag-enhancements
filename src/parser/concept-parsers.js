@@ -40,8 +40,13 @@ function titleFrom(lines) {
   return { name: idx >= 0 ? lines[idx] : (lines[0] || "Untitled"), body: lines.slice(idx + 1) };
 }
 
-function baseItem(name, type, html, system = {}) {
-  return { name, type, img: "icons/svg/book.svg", system: { description: makeDescription(html), ...system } };
+const LINEAGE_ICON = "systems/black-flag/artwork/types/lineage.svg";
+const FEATURE_ICON = "systems/black-flag/artwork/types/feature.svg";
+const SIZE_ADVANCEMENT_ID = "bfeSize000000000";
+const FEATURES_ADVANCEMENT_ID = "bfeFeatures00000";
+
+function baseItem(name, type, html, system = {}, img = "icons/svg/book.svg") {
+  return { name, type, img, system: { description: makeDescription(html), ...system } };
 }
 
 function parseTraitStart(line) {
@@ -83,7 +88,30 @@ function featureItem(trait, lineageName) {
     identifier: { associated: slugify(lineageName), value: slugify(trait.name) },
     type: { category: "lineage", value: "" },
     source: lineageName
-  });
+  }, FEATURE_ICON);
+}
+
+function parseSizeOptions(text = "") {
+  const normalized = String(text).toLowerCase();
+  const options = [];
+  if (/\bsmall\b/.test(normalized)) options.push("small");
+  if (/\bmedium\b/.test(normalized)) options.push("medium");
+  return options.length ? options : [];
+}
+
+function sizeAdvancement(trait) {
+  const options = parseSizeOptions(trait?.text ?? "");
+  if (!options.length) return null;
+  return {
+    _id: SIZE_ADVANCEMENT_ID,
+    configuration: { options },
+    flags: {},
+    hint: traitLine(trait),
+    icon: null,
+    level: { value: null },
+    title: "",
+    type: "size"
+  };
 }
 
 export function parseLineage(input) {
@@ -91,15 +119,22 @@ export function parseLineage(input) {
   const name = toTitleCase(lines[0] || "Untitled");
   const body = lines.slice(1);
   const marker = body.findIndex(l => isLineageMarker(l, name));
-  if (marker < 0) return { primary: baseItem(name, "lineage", linesToHtml(descriptionSentences(body))), related: [] };
+  if (marker < 0) return { primary: baseItem(name, "lineage", linesToHtml(descriptionSentences(body)), { identifier: { value: slugify(name) } }, LINEAGE_ICON), related: [] };
   const before = body.slice(0, marker);
   const traitLines = body.slice(marker + 1);
   const traits = splitTraits(traitLines);
   const related = [];
   const traitBlocks = [];
+  const advancement = {};
   for (const trait of traits) {
     const key = trait.name.toLowerCase();
-    if (TRAIT_SKIP.has(key)) traitBlocks.push(traitLine(trait));
+    if (key === "size") {
+      const size = sizeAdvancement(trait);
+      if (size) {
+        advancement[SIZE_ADVANCEMENT_ID] = size;
+        traitBlocks.push(`@Embed[.Advancement.${SIZE_ADVANCEMENT_ID} inline]{Size}`);
+      } else traitBlocks.push(traitLine(trait));
+    } else if (TRAIT_SKIP.has(key)) traitBlocks.push(traitLine(trait));
     else {
       const token = `@@BFE_EMBED:${trait.name}@@`;
       traitBlocks.push(token);
@@ -111,7 +146,7 @@ export function parseLineage(input) {
     `<h4>${escapeHTML(`${name} Lineage Traits`)}</h4>`,
     linesToHtml(traitBlocks)
   ].filter(Boolean).join("\n");
-  return { primary: baseItem(name, "lineage", html, { identifier: { value: slugify(name) } }), related };
+  return { primary: baseItem(name, "lineage", html, { advancement, identifier: { value: slugify(name) } }, LINEAGE_ICON), related };
 }
 
 export function parseHeritage(input) {

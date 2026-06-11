@@ -137,8 +137,11 @@ function titleFrom(lines) {
   const idx = lines.findIndex((l) => /^[A-Z][\w'’ -]{2,80}$/.test(l) && !/^(Lineage Traits|Martial Talent|Magic Item|Spell)$/i.test(l));
   return { name: idx >= 0 ? lines[idx] : lines[0] || "Untitled", body: lines.slice(idx + 1) };
 }
-function baseItem(name, type, html, system = {}) {
-  return { name, type, img: "icons/svg/book.svg", system: { description: makeDescription(html), ...system } };
+var LINEAGE_ICON = "systems/black-flag/artwork/types/lineage.svg";
+var FEATURE_ICON = "systems/black-flag/artwork/types/feature.svg";
+var SIZE_ADVANCEMENT_ID = "bfeSize000000000";
+function baseItem(name, type, html, system = {}, img = "icons/svg/book.svg") {
+  return { name, type, img, system: { description: makeDescription(html), ...system } };
 }
 function parseTraitStart(line) {
   const match = String(line || "").trim().match(/^([^.:]{2,80})\.\s*(.*)$/);
@@ -175,22 +178,50 @@ function featureItem(trait, lineageName) {
     identifier: { associated: slugify(lineageName), value: slugify(trait.name) },
     type: { category: "lineage", value: "" },
     source: lineageName
-  });
+  }, FEATURE_ICON);
+}
+function parseSizeOptions(text = "") {
+  const normalized = String(text).toLowerCase();
+  const options = [];
+  if (/\bsmall\b/.test(normalized)) options.push("small");
+  if (/\bmedium\b/.test(normalized)) options.push("medium");
+  return options.length ? options : [];
+}
+function sizeAdvancement(trait) {
+  const options = parseSizeOptions(trait?.text ?? "");
+  if (!options.length) return null;
+  return {
+    _id: SIZE_ADVANCEMENT_ID,
+    configuration: { options },
+    flags: {},
+    hint: traitLine(trait),
+    icon: null,
+    level: { value: null },
+    title: "",
+    type: "size"
+  };
 }
 function parseLineage(input) {
   const lines = cleanPdfText(input);
   const name = toTitleCase(lines[0] || "Untitled");
   const body = lines.slice(1);
   const marker = body.findIndex((l) => isLineageMarker(l, name));
-  if (marker < 0) return { primary: baseItem(name, "lineage", linesToHtml(descriptionSentences(body))), related: [] };
+  if (marker < 0) return { primary: baseItem(name, "lineage", linesToHtml(descriptionSentences(body)), { identifier: { value: slugify(name) } }, LINEAGE_ICON), related: [] };
   const before = body.slice(0, marker);
   const traitLines = body.slice(marker + 1);
   const traits = splitTraits(traitLines);
   const related = [];
   const traitBlocks = [];
+  const advancement = {};
   for (const trait of traits) {
     const key = trait.name.toLowerCase();
-    if (TRAIT_SKIP.has(key)) traitBlocks.push(traitLine(trait));
+    if (key === "size") {
+      const size = sizeAdvancement(trait);
+      if (size) {
+        advancement[SIZE_ADVANCEMENT_ID] = size;
+        traitBlocks.push(`@Embed[.Advancement.${SIZE_ADVANCEMENT_ID} inline]{Size}`);
+      } else traitBlocks.push(traitLine(trait));
+    } else if (TRAIT_SKIP.has(key)) traitBlocks.push(traitLine(trait));
     else {
       const token = `@@BFE_EMBED:${trait.name}@@`;
       traitBlocks.push(token);
@@ -202,7 +233,7 @@ function parseLineage(input) {
     `<h4>${escapeHTML(`${name} Lineage Traits`)}</h4>`,
     linesToHtml(traitBlocks)
   ].filter(Boolean).join("\n");
-  return { primary: baseItem(name, "lineage", html, { identifier: { value: slugify(name) } }), related };
+  return { primary: baseItem(name, "lineage", html, { advancement, identifier: { value: slugify(name) } }, LINEAGE_ICON), related };
 }
 function parseHeritage(input) {
   const lines = cleanPdfText(input);
@@ -300,6 +331,7 @@ function parseInput(type, input) {
 
 // src/parser/parsing-application.js
 var { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
+var FEATURES_ADVANCEMENT_ID = "bfeFeatures00000";
 function localizeLabel(key, fallback = key) {
   const localized = game.i18n.localize(key);
   return localized === key ? fallback : localized;
@@ -315,6 +347,15 @@ function optionGroups(types, selected) {
 async function renderDescription(html = "") {
   return TextEditor.enrichHTML(html, { secrets: true });
 }
+function previewDescription(item2) {
+  let html = item2.system?.description?.value ?? "";
+  const size = item2.system?.advancement?.bfeSize000000000;
+  if (size?.hint) {
+    const text = escapeHTML(String(size.hint).replace(/^Size\.\s*/i, ""));
+    html = html.replace(/@Embed\[\.Advancement\.bfeSize000000000 inline\]\{Size\}/g, `<em><strong>Size.</strong></em> ${text}`);
+  }
+  return html;
+}
 var ParsingApplication = class _ParsingApplication extends HandlebarsApplicationMixin(ApplicationV2) {
   static TYPES = PARSER_TYPES;
   static DEFAULT_OPTIONS = {
@@ -322,7 +363,7 @@ var ParsingApplication = class _ParsingApplication extends HandlebarsApplication
     classes: ["black-flag", "black-flag-enhancements", "parser"],
     tag: "form",
     form: { handler: _ParsingApplication.#onSubmit, submitOnChange: false, closeOnSubmit: true },
-    window: { title: "Parse Document", icon: "fa-solid fa-file-lines", resizable: true },
+    window: { title: "BFE Parser", icon: "fa-solid fa-file-lines", resizable: true },
     position: { width: 1024, height: 720 }
   };
   static PARTS = {
@@ -398,7 +439,7 @@ var ParsingApplication = class _ParsingApplication extends HandlebarsApplication
       item: item2,
       result: this.result,
       related: this.result.related ?? [],
-      enriched: { description: await renderDescription(item2.system?.description?.value ?? "") }
+      enriched: { description: await renderDescription(previewDescription(item2)) }
     });
   }
   static async #onSubmit(event, _form, formData) {
@@ -424,6 +465,19 @@ var ParsingApplication = class _ParsingApplication extends HandlebarsApplication
       uuidMap.set(created.name, created.uuid);
     }
     const primary = foundry.utils.deepClone(result.primary);
+    if (related.length && primary.type === "lineage") {
+      primary.system ??= {};
+      primary.system.advancement ??= {};
+      primary.system.advancement[FEATURES_ADVANCEMENT_ID] = {
+        _id: FEATURES_ADVANCEMENT_ID,
+        configuration: { enabled: true, pool: related.map((doc) => ({ uuid: doc.uuid })) },
+        flags: {},
+        icon: null,
+        level: { value: 0 },
+        title: "",
+        type: "grantFeatures"
+      };
+    }
     let html = primary.system?.description?.value ?? "";
     for (const [name, uuid] of uuidMap) html = html.replaceAll(`@@BFE_EMBED:${name}@@`, `@Embed[${uuid} inline]{${escapeHTML(name)}}`);
     if (primary.system?.description) primary.system.description.value = html;
@@ -442,7 +496,7 @@ var ParsingApplication = class _ParsingApplication extends HandlebarsApplication
     button.type = "button";
     button.className = "parse bfe-parse";
     button.dataset.action = "bfe-parse";
-    button.innerHTML = `<i class="fa-solid fa-file-lines" inert></i> Parse Document`;
+    button.innerHTML = `<i class="fa-solid fa-file-lines" inert></i> BFE Parser`;
     button.addEventListener("click", (event) => {
       event.preventDefault();
       new this({ pack }).render({ force: true });

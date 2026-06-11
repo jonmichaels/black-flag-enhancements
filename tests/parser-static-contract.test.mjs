@@ -26,6 +26,8 @@ describe("static parser contract", () => {
     expect(app).toContain("metadata?.type !== \"Item\"");
     expect(app).toContain("pack.locked");
     expect(app).toContain("bfe-parse");
+    expect(app).toContain("BFE Parser");
+    expect(app).toContain("grantFeatures");
     for (const type of ["lineage","heritage","background","talent","spell"]) expect(read("src/parser/parse-input.js")).toContain(`case \"${type}\"`);
   });
   it("has no runtime dependency on black-flag-tools parser source", () => {
