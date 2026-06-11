@@ -51,3 +51,89 @@
         animation: none;
     }
 }
+
+/* ─── Black Flag Enhancements: Parser ─── */
+/* Mirrors Black Flag Tools parser layout as the baseline UI. */
+
+.black-flag-enhancements.parser .window-content {
+    display: grid;
+    grid-template-areas:
+        "input output"
+        "footer footer";
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto min-content;
+    gap: 12px;
+}
+
+.black-flag-enhancements.parser .window-content [data-application-part="input"] { grid-area: input; }
+.black-flag-enhancements.parser .window-content [data-application-part="output"] { grid-area: output; }
+.black-flag-enhancements.parser .window-content [data-application-part="footer"] { grid-area: footer; }
+
+.black-flag-enhancements.parser [data-application-part="input"] textarea {
+    block-size: 100%;
+    inline-size: 100%;
+    border-radius: 0;
+    background: var(--bf-background-color-half-white);
+    resize: none;
+}
+
+.black-flag-enhancements.parser [data-application-part="output"] {
+    border: 2px solid var(--bf-color-border-blue);
+    padding: 8px;
+    overflow-y: auto;
+    background: var(--bf-background-color-half-white);
+}
+
+.black-flag-enhancements.parser [data-application-part="output"] h3 {
+    border: none;
+    color: var(--bf-text-color-black);
+    font-family: var(--bf-font-header);
+    text-shadow: none;
+}
+
+.black-flag-enhancements.parser [data-application-part="output"] dl {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: first baseline;
+    gap: 6px;
+}
+
+.black-flag-enhancements.parser [data-application-part="output"] dl > * {
+    margin: 0;
+    padding: 0;
+    font-family: var(--bf-font-primary);
+    font-size: var(--font-size-14);
+    line-height: normal;
+}
+
+.black-flag-enhancements.parser [data-application-part="output"] dt {
+    color: var(--bf-text-color-black);
+    font-weight: 600;
+    text-shadow: none;
+}
+
+.black-flag-enhancements.parser [data-application-part="output"] dt::after {
+    content: ": ";
+}
+
+.black-flag-enhancements.parser [data-application-part="output"] dd:has(+ dd)::after {
+    content: ", ";
+}
+
+.black-flag-enhancements.parser [data-application-part="output"] dd:not(:has(+ dd)):not(:last-child) {
+    padding-inline-end: 6px;
+    border-inline-end: 1px solid black;
+}
+
+.black-flag-enhancements.parser [data-application-part="footer"] {
+    display: flex;
+    gap: 8px;
+}
+
+.black-flag-enhancements.parser [data-application-part="footer"] > * {
+    flex: 1 1 33%;
+}
+
+.compendium-directory .header-actions .bfe-parse {
+    flex-basis: 100%;
+}

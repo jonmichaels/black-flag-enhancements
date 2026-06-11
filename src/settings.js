@@ -28,8 +28,8 @@ export function registerSettings() {
   });
 
   game.settings.register(MODULE_ID, SETTINGS.PARSER_ENABLED, {
-    name: "BFE.Settings.ParserEnabled.Name",
-    hint: "BFE.Settings.ParserEnabled.Hint",
+    name: "Enable Content Parser",
+    hint: "Show the Black Flag Enhancements parser button on unlocked Item compendiums.",
     scope: "world",
     config: true,
     type: Boolean,
@@ -38,8 +38,8 @@ export function registerSettings() {
   });
 
   game.settings.register(MODULE_ID, SETTINGS.SUPPRESS_BLACK_FLAG_TOOLS_PARSER, {
-    name: "BFE.Settings.SuppressBlackFlagToolsParser.Name",
-    hint: "BFE.Settings.SuppressBlackFlagToolsParser.Hint",
+    name: "Hide Black Flag Tools Parser",
+    hint: "Remove only the Black Flag Tools parser button when both modules are active; all other Black Flag Tools features remain available.",
     scope: "world",
     config: true,
     type: Boolean,

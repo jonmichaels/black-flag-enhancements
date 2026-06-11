@@ -1,1 +1,7 @@
-<section class="bfe-parser-output">{{#if error}}<p class="error">{{error}}</p>{{/if}}{{#if result}}<h3>{{result.primary.name}}</h3><p><strong>{{result.primary.type}}</strong></p><div class="description">{{{result.primary.system.description.value}}}</div>{{#if result.related.length}}<h4>Related Features</h4><ul>{{#each result.related}}<li>{{name}} ({{type}})</li>{{/each}}</ul>{{/if}}{{/if}}</section>
+<section>
+	{{#if error}}
+		<p class="error">{{ error }}</p>
+	{{else}}
+		{{{ preview }}}
+	{{/if}}
+</section>

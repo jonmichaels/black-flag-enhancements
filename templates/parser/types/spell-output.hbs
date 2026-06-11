@@ -1,1 +1,20 @@
-<section class="bfe-parser-type-output"><h3>{{result.primary.name}}</h3><div>{{{result.primary.system.description.value}}}</div></section>
+<h3>{{ item.name }}</h3>
+
+<dl>
+	<dt>Type</dt>
+	<dd>Spell</dd>
+	<dt>{{ localize "BF.Spell.Circle.Label" }}</dt>
+	<dd>{{#if item.system.circle.base}}{{ item.system.circle.base }}{{else}}{{#if item.system.level}}{{ item.system.level }}{{else}}—{{/if}}{{/if}}</dd>
+	<dt>{{ localize "BF.Spell.CastingTime.Label" }}</dt>
+	<dd>{{#if item.system.casting.label}}{{{ item.system.casting.label }}}{{else}}—{{/if}}</dd>
+	<dt>{{ localize "BF.RANGE.Label" }}</dt>
+	<dd>{{#if item.system.range.label}}{{ item.system.range.label }}{{else}}—{{/if}}</dd>
+	<dt>{{ localize "BF.Spell.Component.Label" }}</dt>
+	<dd>{{#if item.system.components.embedLabel}}{{{ item.system.components.embedLabel }}}{{else}}—{{/if}}</dd>
+	<dt>{{ localize "BF.DURATION.Label" }}</dt>
+	<dd>{{#if item.system.duration.label}}{{ item.system.duration.label }}{{else}}—{{/if}}</dd>
+</dl>
+
+<hr>
+
+{{{ enriched.description }}}

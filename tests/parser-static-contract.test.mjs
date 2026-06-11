@@ -12,7 +12,9 @@ describe("static parser contract", () => {
     expect(settings).toMatch(/scope:\s*"world"/);
     expect(settings).toMatch(/type:\s*Boolean/);
     expect(settings).toMatch(/default:\s*true/);
-    expect(read("lang/en.json")).toContain("BFE.Settings.ParserEnabled.Name");
+    expect(read("lang/en.json")).toContain("Enable Content Parser");
+    expect(settings).toContain("Enable Content Parser");
+    expect(settings).toContain("Hide Black Flag Tools Parser");
     expect(read("module.json")).toContain("lang/en.json");
   });
   it("wires ApplicationV2 parser UI and BFE-specific button", () => {
