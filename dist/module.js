@@ -195,16 +195,21 @@ function parseTraitStart(line) {
   if (/^(and|but|or|when|while|where|because|by|with|without|you|your|the|a|an)\b/i.test(name)) return null;
   return { name: toTitleCase(name), rest: match[2].trim() };
 }
+function endsSentence(line = "") {
+  return /[.!?]["”’)]?$/.test(String(line || "").trim());
+}
 function splitTraits(lines) {
   const traits = [];
   let current = null;
+  let previousLine = "";
   for (const line of lines) {
     const match = parseTraitStart(line);
-    if (match) {
+    if (match && (!current || endsSentence(previousLine))) {
       if (current) traits.push({ ...current, text: normalizeInlineText(current.lines) });
       current = { name: match.name, lines: [] };
       if (match.rest) current.lines.push(match.rest);
     } else if (current) current.lines.push(line);
+    previousLine = line;
   }
   if (current) traits.push({ ...current, text: normalizeInlineText(current.lines) });
   return traits;

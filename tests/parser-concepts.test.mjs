@@ -53,6 +53,26 @@ by rubble or uneven stone.`);
     expect(result.related[0].system.description.value).toBe("<p>You gain proficiency in History checks related to stonework and mountains.</p>");
   });
 
+  it("does not split coincidental capitalized sentence fragments into lineage traits", () => {
+    const result = parseInput("lineage", `dryad
+Dryads are forest spirits.
+Dryad Lineage Traits
+Age. Dryads age slowly.
+Size. Your size is Medium.
+Speed. Your base walking speed is 30 feet.
+Natural Magic. Your innate connection to the natural
+world gives you an affinity with plants and animals.
+You know the druidcraft cantrip. In addition, you can
+understand and verbally communicate with Beasts and
+Plants. This works like the speak with animals spell, except it
+also applies to Plants.
+Tree Step. You can use 15 feet of your movement to step
+into one living tree within your reach.`);
+    expect(result.related.map(i => i.name)).toEqual(["Natural Magic", "Tree Step"]);
+    expect(result.primary.system.description.value).toContain("Beasts and Plants. This works like the speak with animals spell");
+    expect(result.primary.system.description.value).not.toContain("<em><strong>Plants.</strong></em>");
+  });
+
   it("accepts lineage traits marker across split pastes and capitalization", () => {
     const result = parseInput("lineage", `half giant\nLarge travelers cross deserts\nand open plains.\n\nhalf giant lineage traits\nAge. You age normally.\nSize. Your size is Medium.\nSpeed. Your speed is 30 feet.\nPowerful Build. You count as one size larger\nwhen determining carrying capacity.`);
     expect(result.primary.name).toBe("Half Giant");
