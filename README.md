@@ -13,6 +13,7 @@ A collection of quality-of-life tweaks and UI enhancements for **Black Flag Role
 | Enhancement | Description |
 |-------------|-------------|
 | **Paused Overlay** | Replaces the default Foundry "Game Paused" clock icon with a Black Flag or ToV themed image with a slow pulse animation. Supports the Black Flag icon (included) and the Tales of the Valiant mark from the Kobold Press ToV Player's Guide module (optional). |
+| **Content Parser** | Adds a configurable plain-text parser for Black Flag items, including spells, magic items, lineages, heritages, backgrounds, and talents. |
 
 ## Installation
 
@@ -37,6 +38,17 @@ All settings are under **Configure Settings** → **Black Flag Enhancements**.
 |---------|------|---------|-------------|
 | Enable | Boolean | On | Toggle the paused overlay replacement |
 | Image | Dropdown | Black Flag Icon | Choose between the Black Flag icon and Tales of the Valiant mark (if ToV module is installed) |
+
+### Content Parser
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| Enable Content Parser | Boolean | On | Shows the Black Flag Enhancements parser button on unlocked Item compendiums. |
+| Hide Black Flag Tools Parser | Boolean | On | Removes the Black Flag Tools parser button when both modules are active so only one parser appears. This does not disable other Black Flag Tools features. |
+
+The parser supports spells, magic items, lineages, heritages, backgrounds, and talents pasted from Black Flag-style text. Messy PDF text is normalized before item creation. Lineage traits such as Darkvision or Bite are created as same-pack `feature` items and embedded back into the lineage description with `@Embed` links.
+
+Black Flag Tools is used as a behavioral reference for existing parser concepts; Black Flag Enhancements does not depend on that module at runtime.
 
 ## How It Works
 

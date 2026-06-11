@@ -1,0 +1,9 @@
+{
+  "BFE.Settings.ParserEnabled.Name": "Enable Content Parser",
+  "BFE.Settings.ParserEnabled.Hint": "Show the Black Flag Enhancements parser button on unlocked Item compendiums.",
+  "BFE.Settings.SuppressBlackFlagToolsParser.Name": "Hide Black Flag Tools Parser",
+  "BFE.Settings.SuppressBlackFlagToolsParser.Hint": "Remove only the Black Flag Tools parser button when both modules are active.",
+  "BFE.Parser.Title": "Parse Document",
+  "BFE.Parser.Input": "Input Text",
+  "BFE.Parser.Save": "Save Item"
+}
