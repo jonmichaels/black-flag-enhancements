@@ -146,11 +146,9 @@ export class ParsingApplication extends HandlebarsApplicationMixin(ApplicationV2
   async saveResult(result, folder = null) {
     const packId = this.pack.metadata.id;
     const related = [];
-    const uuidMap = new Map();
     for (const data of result.related ?? []) {
       const [created] = await Item.createDocuments([{ ...data, folder }], { pack: packId });
       related.push(created);
-      uuidMap.set(created.name, created.uuid);
     }
     const primary = foundry.utils.deepClone(result.primary);
     if (related.length && primary.type === "lineage") {
@@ -166,9 +164,6 @@ export class ParsingApplication extends HandlebarsApplicationMixin(ApplicationV2
         type: "grantFeatures"
       };
     }
-    let html = primary.system?.description?.value ?? "";
-    for (const [name, uuid] of uuidMap) html = html.replaceAll(`@@BFE_EMBED:${name}@@`, `@Embed[${uuid} inline]{${escapeHTML(name)}}`);
-    if (primary.system?.description) primary.system.description.value = html;
     const [createdPrimary] = await Item.createDocuments([{ ...primary, folder }], { pack: packId });
     return createdPrimary;
   }

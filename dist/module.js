@@ -217,14 +217,11 @@ function parseLineage(input) {
     const key = trait.name.toLowerCase();
     if (key === "size") {
       const size = sizeAdvancement(trait);
-      if (size) {
-        advancement[SIZE_ADVANCEMENT_ID] = size;
-        traitBlocks.push(`@Embed[.Advancement.${SIZE_ADVANCEMENT_ID} inline]{Size}`);
-      } else traitBlocks.push(traitLine(trait));
+      if (size) advancement[SIZE_ADVANCEMENT_ID] = size;
+      traitBlocks.push(traitLine(trait));
     } else if (TRAIT_SKIP.has(key)) traitBlocks.push(traitLine(trait));
     else {
-      const token = `@@BFE_EMBED:${trait.name}@@`;
-      traitBlocks.push(token);
+      traitBlocks.push(traitLine(trait));
       related.push(featureItem(trait, name));
     }
   }
@@ -458,11 +455,9 @@ var ParsingApplication = class _ParsingApplication extends HandlebarsApplication
   async saveResult(result, folder = null) {
     const packId = this.pack.metadata.id;
     const related = [];
-    const uuidMap = /* @__PURE__ */ new Map();
     for (const data of result.related ?? []) {
       const [created] = await Item.createDocuments([{ ...data, folder }], { pack: packId });
       related.push(created);
-      uuidMap.set(created.name, created.uuid);
     }
     const primary = foundry.utils.deepClone(result.primary);
     if (related.length && primary.type === "lineage") {
@@ -478,9 +473,6 @@ var ParsingApplication = class _ParsingApplication extends HandlebarsApplication
         type: "grantFeatures"
       };
     }
-    let html = primary.system?.description?.value ?? "";
-    for (const [name, uuid] of uuidMap) html = html.replaceAll(`@@BFE_EMBED:${name}@@`, `@Embed[${uuid} inline]{${escapeHTML(name)}}`);
-    if (primary.system?.description) primary.system.description.value = html;
     const [createdPrimary] = await Item.createDocuments([{ ...primary, folder }], { pack: packId });
     return createdPrimary;
   }

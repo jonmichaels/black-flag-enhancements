@@ -130,14 +130,11 @@ export function parseLineage(input) {
     const key = trait.name.toLowerCase();
     if (key === "size") {
       const size = sizeAdvancement(trait);
-      if (size) {
-        advancement[SIZE_ADVANCEMENT_ID] = size;
-        traitBlocks.push(`@Embed[.Advancement.${SIZE_ADVANCEMENT_ID} inline]{Size}`);
-      } else traitBlocks.push(traitLine(trait));
+      if (size) advancement[SIZE_ADVANCEMENT_ID] = size;
+      traitBlocks.push(traitLine(trait));
     } else if (TRAIT_SKIP.has(key)) traitBlocks.push(traitLine(trait));
     else {
-      const token = `@@BFE_EMBED:${trait.name}@@`;
-      traitBlocks.push(token);
+      traitBlocks.push(traitLine(trait));
       related.push(featureItem(trait, name));
     }
   }

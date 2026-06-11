@@ -4,21 +4,21 @@ import { removeBlackFlagToolsParserButton } from "../src/parser/black-flag-tools
 import { Window } from "happy-dom";
 
 describe("concept parsers", () => {
-  it("parses lineage with related feature items and embed placeholders", () => {
+  it("parses lineage with related feature items and plain trait descriptions", () => {
     const result = parseInput("lineage", `Dhampir\nLineage Traits\nAge. You age normally.\nSize. Your size is Medium or Small.\nSpeed. Your base walking speed is 30 feet.\nDarkvision. You have darkvision to 60 feet.\nBite. Your fanged bite is a natural weapon.`);
     expect(result.primary.type).toBe("lineage");
     expect(result.primary.name).toBe("Dhampir");
     expect(result.primary.img).toBe("systems/black-flag/artwork/types/lineage.svg");
     expect(result.primary.system.description.value).toContain("<h4>Dhampir Lineage Traits</h4>");
     expect(result.primary.system.advancement.bfeSize000000000.configuration.options).toEqual(["small", "medium"]);
-    expect(result.primary.system.description.value).toContain("@Embed[.Advancement.bfeSize000000000 inline]{Size}");
+    expect(result.primary.system.description.value).toContain("<em><strong>Size.</strong></em> Your size is Medium or Small.");
     expect(result.related.map(i => i.img)).toEqual(["systems/black-flag/artwork/types/feature.svg", "systems/black-flag/artwork/types/feature.svg"]);
     expect(result.related.map(i => i.type)).toEqual(["feature", "feature"]);
     expect(result.related.map(i => i.name)).toEqual(["Darkvision", "Bite"]);
     expect(result.related.map(i => i.system.type.category)).toEqual(["lineage", "lineage"]);
     expect(result.related[0].system.description.value).not.toContain("Darkvision");
-    expect(result.primary.system.description.value).toContain("@@BFE_EMBED:Darkvision@@");
-    expect(result.primary.system.description.value).not.toContain("<strong>Darkvision.");
+    expect(result.primary.system.description.value).toContain("<em><strong>Darkvision.</strong></em> You have darkvision to 60 feet.");
+    expect(result.primary.system.description.value).toContain("<em><strong>Bite.</strong></em> Your fanged bite is a natural weapon.");
   });
 
   it("cleans messy PDF lineage paste into description paragraphs and feature traits", () => {
@@ -47,8 +47,8 @@ by rubble or uneven stone.`);
     expect(description).toContain("<p>Some settlements call them granite folk.</p>");
     expect(description).toContain("<h4>Stone Born Lineage Traits</h4>");
     expect(description).toContain("<em><strong>Age.</strong></em> Stone born mature at the same rate as humans and live about a century.");
-    expect(description).toContain("@@BFE_EMBED:Mountain Lore@@");
-    expect(description).not.toContain("<strong>Mountain Lore.");
+    expect(description).toContain("<em><strong>Mountain Lore.</strong></em> You gain proficiency in History checks related to stonework and mountains.");
+    expect(description).toContain("<em><strong>Sure Footed.</strong></em> You ignore difficult terrain caused by rubble or uneven stone.");
     expect(result.related.map(i => i.name)).toEqual(["Mountain Lore", "Sure Footed"]);
     expect(result.related[0].system.description.value).toBe("<p>You gain proficiency in History checks related to stonework and mountains.</p>");
   });

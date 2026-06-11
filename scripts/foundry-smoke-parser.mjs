@@ -16,13 +16,11 @@ const out = { ok: true, world: game.world.id, system: game.system.id, active: ga
 for (const [type, input] of Object.entries(samples)) {
   const result = mod.parseInput(type, input);
   const related = [];
-  const uuidMap = new Map();
   for (const data of result.related ?? []) {
     const [created] = await Item.createDocuments([data], { pack: pack.metadata.id });
-    related.push(created); uuidMap.set(created.name, created.uuid);
+    related.push(created);
   }
   const primary = foundry.utils.deepClone(result.primary);
-  if (primary.system?.description?.value) for (const [name, uuid] of uuidMap) primary.system.description.value = primary.system.description.value.replaceAll(`@@BFE_EMBED:${name}@@`, `@Embed[${uuid} inline]{${name}}`);
   const [created] = await Item.createDocuments([primary], { pack: pack.metadata.id });
   out.created[type] = { id: created.id, name: created.name, type: created.type, related: related.map(d => ({ id: d.id, name: d.name, type: d.type })), description: created.system.description?.value };
 }

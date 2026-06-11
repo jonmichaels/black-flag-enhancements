@@ -41,9 +41,10 @@ describe("parser UI contract", () => {
     expect(humanFacing).toContain("Save");
   });
 
-  it("shows related feature descriptions in parser preview", () => {
+  it("shows related feature names only in parser preview", () => {
     const template = read("templates/parser/types/concept-output.hbs");
     expect(template).toContain("Related Features");
-    expect(template).toMatch(/description\.value/);
+    expect(template).not.toMatch(/description\.value/);
+    expect(template).not.toContain("related-feature-description");
   });
 });
