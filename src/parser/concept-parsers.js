@@ -209,6 +209,7 @@ export function parseHeritage(input) {
     before: body.slice(0, traitStart),
     traitLines: body.slice(traitStart),
     category: "heritage",
+    skippedTraits: new Set(["languages"]),
     extraAdvancement: languageAdvancement,
     maxTraitWords: 2,
     img: HERITAGE_ICON
