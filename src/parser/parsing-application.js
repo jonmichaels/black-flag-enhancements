@@ -98,7 +98,7 @@ async function resolveTalentPool(talentNames = []) {
 
 async function populateBackgroundTalentPool(primary) {
   if (primary.type !== "background") return;
-  const advancement = primary.system?.advancement?.bfeTalent000000;
+  const advancement = primary.system?.advancement?.bfeTalent0000000;
   if (!advancement) return;
   const pool = await resolveTalentPool(backgroundTalentNames(primary));
   if (pool.length) advancement.configuration.pool = pool;

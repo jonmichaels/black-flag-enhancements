@@ -288,7 +288,7 @@ const BACKGROUND_SECTION_HEADINGS = ["Talent", "Adventuring Motivation"];
 const BACKGROUND_ADVANCEMENT_IDS = {
   skills: "bfeSkillProfs000",
   additional: "bfeAdditional000",
-  talent: "bfeTalent000000"
+  talent: "bfeTalent0000000"
 };
 const SKILL_NAME_KEYS = {
   acrobatics: "acrobatics",
@@ -464,8 +464,8 @@ export function parseBackground(input) {
     const sentences = descriptionSentences(intro);
     if (!descriptionShort) {
       descriptionShort = normalizeInlineText(sentences.slice(0, 2));
-      htmlParts.push(linesToHtml(sentences.slice(2), { traitStyle: false }));
-    } else htmlParts.push(linesToHtml(sentences, { traitStyle: false }));
+    }
+    htmlParts.push(linesToHtml(sentences, { traitStyle: false }));
     intro = [];
   };
   const flushInline = () => {

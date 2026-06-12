@@ -407,7 +407,7 @@ var BACKGROUND_SECTION_HEADINGS = ["Talent", "Adventuring Motivation"];
 var BACKGROUND_ADVANCEMENT_IDS = {
   skills: "bfeSkillProfs000",
   additional: "bfeAdditional000",
-  talent: "bfeTalent000000"
+  talent: "bfeTalent0000000"
 };
 var SKILL_NAME_KEYS = {
   acrobatics: "acrobatics",
@@ -571,8 +571,8 @@ function parseBackground(input) {
     const sentences = descriptionSentences(intro);
     if (!descriptionShort) {
       descriptionShort = normalizeInlineText(sentences.slice(0, 2));
-      htmlParts.push(linesToHtml(sentences.slice(2), { traitStyle: false }));
-    } else htmlParts.push(linesToHtml(sentences, { traitStyle: false }));
+    }
+    htmlParts.push(linesToHtml(sentences, { traitStyle: false }));
     intro = [];
   };
   const flushInline = () => {
@@ -808,7 +808,7 @@ async function resolveTalentPool(talentNames = []) {
 }
 async function populateBackgroundTalentPool(primary) {
   if (primary.type !== "background") return;
-  const advancement = primary.system?.advancement?.bfeTalent000000;
+  const advancement = primary.system?.advancement?.bfeTalent0000000;
   if (!advancement) return;
   const pool = await resolveTalentPool(backgroundTalentNames(primary));
   if (pool.length) advancement.configuration.pool = pool;
