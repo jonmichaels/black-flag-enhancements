@@ -66,13 +66,48 @@ function backgroundTalentNames(primary) {
   return primary?.flags?.[MODULE_ID]?.talentNames ?? primary?.flags?.["black-flag-enhancements"]?.talentNames ?? [];
 }
 
-function sortTalentPacks(packs) {
+function backgroundEquipmentEntries(primary) {
+  return primary?.flags?.[MODULE_ID]?.equipment ?? primary?.flags?.["black-flag-enhancements"]?.equipment ?? [];
+}
+
+function normalizeLookupName(name = "") {
+  return String(name)
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[’']/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+const EQUIPMENT_ALIASES = new Map([
+  ["hand mirror", "Compact Mirror"],
+  ["mirror", "Compact Mirror"],
+  ["playing cards", "Card Set"],
+  ["pack of playing cards", "Card Set"],
+  ["cards", "Card Set"],
+  ["dice", "Dice Set"],
+  ["set of dice", "Dice Set"],
+  ["gp", "Gold"]
+]);
+
+function equipmentLookupNames(name = "") {
+  const normalized = normalizeLookupName(name);
+  const singular = normalized.replace(/s$/, "");
+  const alias = EQUIPMENT_ALIASES.get(normalized) ?? EQUIPMENT_ALIASES.get(singular);
+  return [alias, name, singular].filter(Boolean).map(normalizeLookupName);
+}
+
+function sortBackgroundItemPacks(packs) {
   return [...packs].sort((a, b) => {
     const aid = `${a.collection} ${a.title}`.toLowerCase();
     const bid = `${b.collection} ${b.title}`.toLowerCase();
     const rank = id => id.includes("tov") || id.includes("player") ? 0 : id.includes("bfrd") || id.includes("black-flag") ? 1 : 2;
     return rank(aid) - rank(bid);
   });
+}
+
+function sortTalentPacks(packs) {
+  return sortBackgroundItemPacks(packs);
 }
 
 async function resolveTalentPool(talentNames = []) {
@@ -101,6 +136,79 @@ async function populateBackgroundTalentPool(primary) {
   const advancement = primary.system?.advancement?.bfeTalent0000000;
   if (!advancement) return;
   const pool = await resolveTalentPool(backgroundTalentNames(primary));
+  if (pool.length) advancement.configuration.pool = pool;
+}
+
+function equipmentEntryId() {
+  return foundry.utils.randomID(16);
+}
+
+function equipmentPoolEntry(uuid, count, sort, group = "") {
+  return {
+    type: "linked",
+    count: count ?? null,
+    key: uuid,
+    requiresProficiency: false,
+    _id: equipmentEntryId(),
+    group,
+    sort
+  };
+}
+
+async function resolveEquipmentUuid(entry, packs) {
+  if (!entry?.name) return null;
+  const wanted = new Set(equipmentLookupNames(entry.name));
+  for (const pack of packs) {
+    const id = `${pack.collection} ${pack.title}`.toLowerCase();
+    if (!/(tov|player|bfrd|black-flag)/.test(id)) continue;
+    const index = await pack.getIndex({ fields: ["name", "type"] });
+    for (const item of index) {
+      if (wanted.has(normalizeLookupName(item.name))) return `Compendium.${pack.collection}.Item.${item._id}`;
+    }
+  }
+  return null;
+}
+
+async function resolveEquipmentPool(equipment = []) {
+  if (!equipment.length) return [];
+  const packs = sortBackgroundItemPacks(game.packs.filter(pack => pack.documentName === "Item"));
+  const pool = [];
+  let sort = 100000;
+  for (const entry of equipment) {
+    if (entry.group === "OR") {
+      const children = [];
+      for (const option of entry.options ?? []) {
+        const uuid = await resolveEquipmentUuid(option, packs);
+        if (uuid) children.push({ uuid, count: option.count ?? null });
+      }
+      if (!children.length) continue;
+      if (children.length === 1) {
+        pool.push(equipmentPoolEntry(children[0].uuid, children[0].count, sort));
+        sort += 100000;
+        continue;
+      }
+      const group = equipmentEntryId();
+      pool.push({ type: "OR", requiresProficiency: false, _id: group, group: "", sort });
+      sort += 100000;
+      for (const child of children) {
+        pool.push(equipmentPoolEntry(child.uuid, child.count, sort, group));
+        sort += 100000;
+      }
+    } else {
+      const uuid = await resolveEquipmentUuid(entry, packs);
+      if (!uuid) continue;
+      pool.push(equipmentPoolEntry(uuid, entry.count ?? null, sort));
+      sort += 100000;
+    }
+  }
+  return pool;
+}
+
+async function populateBackgroundEquipmentPool(primary) {
+  if (primary.type !== "background") return;
+  const advancement = primary.system?.advancement?.bfeEquipment0000;
+  if (!advancement) return;
+  const pool = await resolveEquipmentPool(backgroundEquipmentEntries(primary));
   if (pool.length) advancement.configuration.pool = pool;
 }
 
@@ -265,6 +373,7 @@ export class ParsingApplication extends HandlebarsApplicationMixin(ApplicationV2
       };
     }
     await populateBackgroundTalentPool(primary);
+    await populateBackgroundEquipmentPool(primary);
     const [createdPrimary] = await Item.createDocuments([{ ...primary, folder: primaryFolder }], { pack: packId });
     return createdPrimary;
   }

@@ -288,6 +288,7 @@ const BACKGROUND_SECTION_HEADINGS = ["Talent", "Adventuring Motivation"];
 const BACKGROUND_ADVANCEMENT_IDS = {
   skills: "bfeSkillProfs000",
   additional: "bfeAdditional000",
+  equipment: "bfeEquipment0000",
   talent: "bfeTalent0000000"
 };
 const SKILL_NAME_KEYS = {
@@ -404,6 +405,67 @@ function toolGrantKeysFromText(text = "") {
   return [...new Set(grants)];
 }
 
+function normalizeEquipmentName(text = "") {
+  return String(text)
+    .trim()
+    .replace(/[.。]$/u, "")
+    .replace(/\s*\([^)]*\)\s*/g, " ")
+    .replace(/^a\s+set\s+of\s+/i, "")
+    .replace(/^a\s+pack\s+of\s+/i, "")
+    .replace(/^set\s+of\s+/i, "")
+    .replace(/^pack\s+of\s+/i, "")
+    .replace(/^(?:a|an|the|one)\s+/i, "")
+    .replace(/^five\s+/i, "")
+    .replace(/^\d+\s+/i, "")
+    .trim();
+}
+
+function countFromEquipmentPart(text = "") {
+  const match = String(text).trim().toLowerCase().match(/^(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\b/);
+  if (!match) return null;
+  return NUMBER_WORDS[match[1]] ?? Number(match[1]) ?? null;
+}
+
+function equipmentEntry(name, count = null) {
+  return { name: normalizeEquipmentName(name), count };
+}
+
+function equipmentEntriesFromText(text = "") {
+  const entries = [];
+  const normalized = String(text).replace(/\s+/g, " ").trim();
+  const currency = normalized.match(/\b(\d+)\s*(?:gp|gold(?:\s+pieces?)?)\b/i);
+  const withoutCurrency = normalized
+    .replace(/(?:,?\s*(?:and\s+)?)?a\s+pouch\s+containing\s+\d+\s*(?:gp|gold(?:\s+pieces?)?)/i, "")
+    .replace(/(?:,?\s*(?:and\s+)?)?\d+\s*(?:gp|gold(?:\s+pieces?)?)/i, "");
+  for (const rawPart of withoutCurrency.split(/,(?![^()]*\))/)) {
+    const part = rawPart.trim().replace(/^and\s+/i, "");
+    const partWithoutParentheticals = part.replace(/\s*\([^)]*\)\s*/g, " ");
+    if (!part) continue;
+    if (/\bor\b/i.test(partWithoutParentheticals)) {
+      const options = partWithoutParentheticals.split(/\bor\b/i).map(option => equipmentEntry(option, countFromEquipmentPart(option))).filter(e => e.name);
+      if (options.length) entries.push({ group: "OR", options });
+    } else {
+      const entry = equipmentEntry(part, countFromEquipmentPart(part));
+      if (entry.name) entries.push(entry);
+    }
+  }
+  if (currency) entries.push({ name: "Gold", count: Number(currency[1]) });
+  return entries;
+}
+
+function backgroundEquipmentAdvancement(text = "") {
+  return {
+    _id: BACKGROUND_ADVANCEMENT_IDS.equipment,
+    configuration: { pool: [] },
+    flags: {},
+    hint: text,
+    icon: null,
+    level: { value: 0, classRestriction: "original" },
+    title: "",
+    type: "equipment"
+  };
+}
+
 function backgroundSkillAdvancement(text = "") {
   const skills = skillKeysFromText(text);
   return {
@@ -457,6 +519,7 @@ export function parseBackground(input) {
   let section = null;
   let descriptionShort = "";
   let talentNames = [];
+  let equipment = [];
   let i = 0;
 
   const flushIntro = () => {
@@ -473,6 +536,10 @@ export function parseBackground(input) {
     const text = normalizeInlineText(inline.lines);
     if (inline.label === "Skill Proficiencies") advancement[BACKGROUND_ADVANCEMENT_IDS.skills] = backgroundSkillAdvancement(text);
     else if (inline.label === "Additional Proficiencies") advancement[BACKGROUND_ADVANCEMENT_IDS.additional] = backgroundAdditionalAdvancement(text);
+    else if (inline.label === "Equipment") {
+      advancement[BACKGROUND_ADVANCEMENT_IDS.equipment] = backgroundEquipmentAdvancement(text);
+      equipment = equipmentEntriesFromText(text);
+    }
     const label = `${inline.label}${inline.punctuation}`;
     htmlParts.push(`<p><em><strong>${escapeHTML(label)}</strong></em>${text ? ` ${escapeHTML(text)}` : ""}</p>`);
     inline = null;
@@ -533,7 +600,7 @@ export function parseBackground(input) {
   const html = htmlParts.filter(Boolean).join("\n");
   const primary = baseItem(name, "background", html, { advancement, identifier: { value: slugify(name) } }, BACKGROUND_ICON);
   primary.system.description.short = descriptionShort;
-  primary.flags = { "black-flag-enhancements": { talentNames } };
+  primary.flags = { "black-flag-enhancements": { talentNames, equipment } };
   return { primary, related: [] };
 }
 

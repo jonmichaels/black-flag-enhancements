@@ -299,12 +299,36 @@ d8 Adventuring Motivation
     expect(item.system.advancement.bfeAdditional000.hint).toBe("Learn one additional language of your choice and gain proficiency with trapper tools.");
     expect(item.system.advancement.bfeAdditional000.configuration.choices).toEqual([{ count: 1, pool: ["languages:*"] }]);
     expect(item.system.advancement.bfeAdditional000.configuration.grants).toEqual(["tools:trapper"]);
+    expect(item.system.advancement.bfeEquipment0000.type).toBe("equipment");
+    expect(item.system.advancement.bfeEquipment0000.hint).toBe("A cloak, a set of traveler’s clothes, a backpack, five wooden stakes, a hand mirror, and a pouch containing 10 gp.");
+    expect(item.system.advancement.bfeEquipment0000.level).toEqual({ value: 0, classRestriction: "original" });
+    expect(item.flags["black-flag-enhancements"].equipment).toEqual([
+      { name: "cloak", count: null },
+      { name: "traveler’s clothes", count: null },
+      { name: "backpack", count: null },
+      { name: "wooden stakes", count: 5 },
+      { name: "hand mirror", count: null },
+      { name: "Gold", count: 10 }
+    ]);
     expect(item.system.advancement.bfeTalent0000000.hint).toBe("You have received special training combined with some natural ability to make you a crack vampire hunter. Choose a talent from this list to represent your experience: Covert, Critical Training, or Spell Duelist.");
     expect(item.system.advancement.bfeTalent0000000._id).toBe("bfeTalent0000000");
     expect(item.system.advancement.bfeTalent0000000._id).toHaveLength(16);
     expect(item.system.advancement.bfeTalent0000000.configuration.choices).toEqual({ 0: { count: 1 } });
     expect(item.system.advancement.bfeTalent0000000.configuration.type).toBe("talent");
     expect(item.flags["black-flag-enhancements"].talentNames).toEqual(["Covert", "Critical Training", "Spell Duelist"]);
+  });
+
+  it("parses background equipment options and OR choices", () => {
+    const item = parseInput("background", `SOLDIER
+You spent a significant amount of time risking your life to defend others.
+Equipment: A symbol of rank (like a letter, badge, or identification tags), a mess kit, a pack of playing cards or a set of dice, a set of common clothes, and a pouch containing 10 gp.`).primary;
+    expect(item.flags["black-flag-enhancements"].equipment).toEqual([
+      { name: "symbol of rank", count: null },
+      { name: "mess kit", count: null },
+      { group: "OR", options: [{ name: "playing cards", count: null }, { name: "dice", count: null }] },
+      { name: "common clothes", count: null },
+      { name: "Gold", count: 10 }
+    ]);
   });
 
   it("keeps existing parser types available", () => {

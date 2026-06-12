@@ -407,6 +407,7 @@ var BACKGROUND_SECTION_HEADINGS = ["Talent", "Adventuring Motivation"];
 var BACKGROUND_ADVANCEMENT_IDS = {
   skills: "bfeSkillProfs000",
   additional: "bfeAdditional000",
+  equipment: "bfeEquipment0000",
   talent: "bfeTalent0000000"
 };
 var SKILL_NAME_KEYS = {
@@ -515,6 +516,49 @@ function toolGrantKeysFromText(text = "") {
   }
   return [...new Set(grants)];
 }
+function normalizeEquipmentName(text = "") {
+  return String(text).trim().replace(/[.。]$/u, "").replace(/\s*\([^)]*\)\s*/g, " ").replace(/^a\s+set\s+of\s+/i, "").replace(/^a\s+pack\s+of\s+/i, "").replace(/^set\s+of\s+/i, "").replace(/^pack\s+of\s+/i, "").replace(/^(?:a|an|the|one)\s+/i, "").replace(/^five\s+/i, "").replace(/^\d+\s+/i, "").trim();
+}
+function countFromEquipmentPart(text = "") {
+  const match = String(text).trim().toLowerCase().match(/^(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\b/);
+  if (!match) return null;
+  return NUMBER_WORDS[match[1]] ?? Number(match[1]) ?? null;
+}
+function equipmentEntry(name, count = null) {
+  return { name: normalizeEquipmentName(name), count };
+}
+function equipmentEntriesFromText(text = "") {
+  const entries = [];
+  const normalized = String(text).replace(/\s+/g, " ").trim();
+  const currency = normalized.match(/\b(\d+)\s*(?:gp|gold(?:\s+pieces?)?)\b/i);
+  const withoutCurrency = normalized.replace(/(?:,?\s*(?:and\s+)?)?a\s+pouch\s+containing\s+\d+\s*(?:gp|gold(?:\s+pieces?)?)/i, "").replace(/(?:,?\s*(?:and\s+)?)?\d+\s*(?:gp|gold(?:\s+pieces?)?)/i, "");
+  for (const rawPart of withoutCurrency.split(/,(?![^()]*\))/)) {
+    const part = rawPart.trim().replace(/^and\s+/i, "");
+    const partWithoutParentheticals = part.replace(/\s*\([^)]*\)\s*/g, " ");
+    if (!part) continue;
+    if (/\bor\b/i.test(partWithoutParentheticals)) {
+      const options = partWithoutParentheticals.split(/\bor\b/i).map((option) => equipmentEntry(option, countFromEquipmentPart(option))).filter((e) => e.name);
+      if (options.length) entries.push({ group: "OR", options });
+    } else {
+      const entry = equipmentEntry(part, countFromEquipmentPart(part));
+      if (entry.name) entries.push(entry);
+    }
+  }
+  if (currency) entries.push({ name: "Gold", count: Number(currency[1]) });
+  return entries;
+}
+function backgroundEquipmentAdvancement(text = "") {
+  return {
+    _id: BACKGROUND_ADVANCEMENT_IDS.equipment,
+    configuration: { pool: [] },
+    flags: {},
+    hint: text,
+    icon: null,
+    level: { value: 0, classRestriction: "original" },
+    title: "",
+    type: "equipment"
+  };
+}
 function backgroundSkillAdvancement(text = "") {
   const skills = skillKeysFromText(text);
   return {
@@ -565,6 +609,7 @@ function parseBackground(input) {
   let section = null;
   let descriptionShort = "";
   let talentNames = [];
+  let equipment = [];
   let i = 0;
   const flushIntro = () => {
     if (!intro.length) return;
@@ -580,6 +625,10 @@ function parseBackground(input) {
     const text = normalizeInlineText(inline.lines);
     if (inline.label === "Skill Proficiencies") advancement[BACKGROUND_ADVANCEMENT_IDS.skills] = backgroundSkillAdvancement(text);
     else if (inline.label === "Additional Proficiencies") advancement[BACKGROUND_ADVANCEMENT_IDS.additional] = backgroundAdditionalAdvancement(text);
+    else if (inline.label === "Equipment") {
+      advancement[BACKGROUND_ADVANCEMENT_IDS.equipment] = backgroundEquipmentAdvancement(text);
+      equipment = equipmentEntriesFromText(text);
+    }
     const label = `${inline.label}${inline.punctuation}`;
     htmlParts.push(`<p><em><strong>${escapeHTML(label)}</strong></em>${text ? ` ${escapeHTML(text)}` : ""}</p>`);
     inline = null;
@@ -636,7 +685,7 @@ function parseBackground(input) {
   const html = htmlParts.filter(Boolean).join("\n");
   const primary = baseItem(name, "background", html, { advancement, identifier: { value: slugify(name) } }, BACKGROUND_ICON);
   primary.system.description.short = descriptionShort;
-  primary.flags = { "black-flag-enhancements": { talentNames } };
+  primary.flags = { "black-flag-enhancements": { talentNames, equipment } };
   return { primary, related: [] };
 }
 function parseTalent(input) {
@@ -778,13 +827,38 @@ function isConceptWithFeatures(type) {
 function backgroundTalentNames(primary) {
   return primary?.flags?.[MODULE_ID]?.talentNames ?? primary?.flags?.["black-flag-enhancements"]?.talentNames ?? [];
 }
-function sortTalentPacks(packs) {
+function backgroundEquipmentEntries(primary) {
+  return primary?.flags?.[MODULE_ID]?.equipment ?? primary?.flags?.["black-flag-enhancements"]?.equipment ?? [];
+}
+function normalizeLookupName(name = "") {
+  return String(name).toLowerCase().normalize("NFKD").replace(/[’']/g, "").replace(/[^a-z0-9]+/g, " ").trim();
+}
+var EQUIPMENT_ALIASES = /* @__PURE__ */ new Map([
+  ["hand mirror", "Compact Mirror"],
+  ["mirror", "Compact Mirror"],
+  ["playing cards", "Card Set"],
+  ["pack of playing cards", "Card Set"],
+  ["cards", "Card Set"],
+  ["dice", "Dice Set"],
+  ["set of dice", "Dice Set"],
+  ["gp", "Gold"]
+]);
+function equipmentLookupNames(name = "") {
+  const normalized = normalizeLookupName(name);
+  const singular = normalized.replace(/s$/, "");
+  const alias = EQUIPMENT_ALIASES.get(normalized) ?? EQUIPMENT_ALIASES.get(singular);
+  return [alias, name, singular].filter(Boolean).map(normalizeLookupName);
+}
+function sortBackgroundItemPacks(packs) {
   return [...packs].sort((a, b) => {
     const aid = `${a.collection} ${a.title}`.toLowerCase();
     const bid = `${b.collection} ${b.title}`.toLowerCase();
     const rank = (id) => id.includes("tov") || id.includes("player") ? 0 : id.includes("bfrd") || id.includes("black-flag") ? 1 : 2;
     return rank(aid) - rank(bid);
   });
+}
+function sortTalentPacks(packs) {
+  return sortBackgroundItemPacks(packs);
 }
 async function resolveTalentPool(talentNames = []) {
   const names = talentNames.map((name) => String(name || "").trim()).filter(Boolean);
@@ -811,6 +885,74 @@ async function populateBackgroundTalentPool(primary) {
   const advancement = primary.system?.advancement?.bfeTalent0000000;
   if (!advancement) return;
   const pool = await resolveTalentPool(backgroundTalentNames(primary));
+  if (pool.length) advancement.configuration.pool = pool;
+}
+function equipmentEntryId() {
+  return foundry.utils.randomID(16);
+}
+function equipmentPoolEntry(uuid, count, sort, group = "") {
+  return {
+    type: "linked",
+    count: count ?? null,
+    key: uuid,
+    requiresProficiency: false,
+    _id: equipmentEntryId(),
+    group,
+    sort
+  };
+}
+async function resolveEquipmentUuid(entry, packs) {
+  if (!entry?.name) return null;
+  const wanted = new Set(equipmentLookupNames(entry.name));
+  for (const pack of packs) {
+    const id = `${pack.collection} ${pack.title}`.toLowerCase();
+    if (!/(tov|player|bfrd|black-flag)/.test(id)) continue;
+    const index = await pack.getIndex({ fields: ["name", "type"] });
+    for (const item2 of index) {
+      if (wanted.has(normalizeLookupName(item2.name))) return `Compendium.${pack.collection}.Item.${item2._id}`;
+    }
+  }
+  return null;
+}
+async function resolveEquipmentPool(equipment = []) {
+  if (!equipment.length) return [];
+  const packs = sortBackgroundItemPacks(game.packs.filter((pack) => pack.documentName === "Item"));
+  const pool = [];
+  let sort = 1e5;
+  for (const entry of equipment) {
+    if (entry.group === "OR") {
+      const children = [];
+      for (const option of entry.options ?? []) {
+        const uuid = await resolveEquipmentUuid(option, packs);
+        if (uuid) children.push({ uuid, count: option.count ?? null });
+      }
+      if (!children.length) continue;
+      if (children.length === 1) {
+        pool.push(equipmentPoolEntry(children[0].uuid, children[0].count, sort));
+        sort += 1e5;
+        continue;
+      }
+      const group = equipmentEntryId();
+      pool.push({ type: "OR", requiresProficiency: false, _id: group, group: "", sort });
+      sort += 1e5;
+      for (const child of children) {
+        pool.push(equipmentPoolEntry(child.uuid, child.count, sort, group));
+        sort += 1e5;
+      }
+    } else {
+      const uuid = await resolveEquipmentUuid(entry, packs);
+      if (!uuid) continue;
+      pool.push(equipmentPoolEntry(uuid, entry.count ?? null, sort));
+      sort += 1e5;
+    }
+  }
+  return pool;
+}
+async function populateBackgroundEquipmentPool(primary) {
+  if (primary.type !== "background") return;
+  const advancement = primary.system?.advancement?.bfeEquipment0000;
+  if (!advancement) return;
+  const pool = await resolveEquipmentPool(backgroundEquipmentEntries(primary));
   if (pool.length) advancement.configuration.pool = pool;
 }
 function packFolders(pack) {
@@ -960,6 +1102,7 @@ var ParsingApplication = class _ParsingApplication extends HandlebarsApplication
       };
     }
     await populateBackgroundTalentPool(primary);
+    await populateBackgroundEquipmentPool(primary);
     const [createdPrimary] = await Item.createDocuments([{ ...primary, folder: primaryFolder }], { pack: packId });
     return createdPrimary;
   }
