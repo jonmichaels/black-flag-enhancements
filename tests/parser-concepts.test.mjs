@@ -73,6 +73,32 @@ Equine Build. You count as one size larger when determining carrying capacity.`)
     expect(result.related.map(i => i.name)).toEqual(["Equine Build"]);
   });
 
+  it("formats Rachisan Natural Adaptation choices and creates feature items", () => {
+    const result = parseInput("lineage", `Rachisan
+Rachisans are diminutive humanoids with plant features.
+Rachisan Lineage Traits
+Age. Rachisans mature rapidly.
+Size. Your size is Small.
+Speed. Your base walking speed is 30 feet.
+Hybrid Humanoid. You are primarily a Humanoid, but have traits in common with Plants.
+Green Thumb. When you make a check to interact with plants, you can add a d8.
+Natural Adaptation. You have inherited one of the
+following traits, determined by what kind of plant
+characteristics you want your character to have:
+• Alliumite. Allium-style option text spans
+multiple lines.
+• Cruciferan. Cruciferan option text also spans
+multiple lines.
+• Tuberkith. Tuberkith option text spans
+multiple lines.`);
+    const description = result.primary.system.description.value;
+    expect(result.related.map(i => i.name)).toEqual(["Hybrid Humanoid", "Green Thumb", "Alliumite", "Cruciferan", "Tuberkith"]);
+    expect(description).toContain("<em><strong>Natural Adaptation.</strong></em> You have inherited one of the following traits");
+    expect(description).toContain("<li><strong>Alliumite.</strong> Allium-style option text spans multiple lines.</li>");
+    expect(description).toContain("<li><strong>Tuberkith.</strong> Tuberkith option text spans multiple lines.</li>");
+    expect(result.related.find(i => i.name === "Cruciferan").system.description.value).toContain("Cruciferan option text also spans multiple lines.");
+  });
+
   it("formats Gearforged Upgrade choices and keeps components separate", () => {
     const result = parseInput("lineage", `Gearforged
 Gearforged are living minds inside mechanical bodies.

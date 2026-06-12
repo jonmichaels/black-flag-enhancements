@@ -414,7 +414,7 @@ function parseChoiceListTrait(trait) {
   let current = null;
   for (const rawLine of trait.lines ?? []) {
     const line = String(rawLine || "").trim();
-    const match = line.match(/^[•\-*]\s*(Ogre|Troll|Fey|Earthborn|Fireborn|Waterborn|Windborn|Always Armed|Bulk Up|Quick Fix)\.\s*(.*)$/i);
+    const match = line.match(/^[•\-*]\s*(Ogre|Troll|Fey|Earthborn|Fireborn|Waterborn|Windborn|Always Armed|Bulk Up|Quick Fix|Alliumite|Cruciferan|Tuberkith)\.\s*(.*)$/i);
     if (match) {
       if (current) choices.push({ ...current, text: normalizeInlineText(current.lines) });
       const label = toTitleCase(match[1]);
