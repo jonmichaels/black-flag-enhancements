@@ -297,7 +297,7 @@ function parseTraitSection({ name, type, before, traitLines, category, skippedTr
 }
 function findHeritageTraitStart(lines = []) {
   for (let i = 0; i < lines.length; i += 1) {
-    const match = parseTraitStart(lines[i], { maxWords: 2 });
+    const match = parseTraitStart(lines[i], { maxWords: 3 });
     const previous = lines[i - 1] ?? "";
     if (match && i > 0 && endsSentence(previous)) return i;
   }
@@ -334,7 +334,7 @@ function parseHeritage(input) {
     category: "heritage",
     skippedTraits: /* @__PURE__ */ new Set(["languages"]),
     extraAdvancement: languageAdvancement,
-    maxTraitWords: 2,
+    maxTraitWords: 3,
     img: HERITAGE_ICON
   });
 }

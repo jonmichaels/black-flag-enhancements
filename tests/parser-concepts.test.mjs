@@ -152,16 +152,36 @@ as though it were solid ground.`);
     expect(result.primary.system.advancement.bfeLanguages0000.hint).toBe("You can speak, read, and write Common and Auran.");
   });
 
-  it("does not treat three-word heritage sentence starts as trait headings", () => {
+  it("parses Pine Scion style three-word heritage trait headings", () => {
+    const result = parseInput("heritage", `pine scion
+Pine scion heritage characters carry the best aspects of
+the dryad communities into the world. They love the comforts of home.
+Bark Eater. As long as there are pine trees in your
+environment, you can provide enough food and water.
+Scale the Branches. You have a climbing speed equal to
+your walking speed. While climbing, you can take the Dash
+action as a bonus action.
+Woodcraft. You have proficiency in either the Nature or
+Survival skill.
+Languages. You know Common and one other language
+of your choice.`);
+    expect(result.primary.name).toBe("Pine Scion");
+    expect(result.related.map(i => i.name)).toEqual(["Bark Eater", "Scale The Branches", "Woodcraft"]);
+    expect(result.primary.system.description.value).toContain("<em><strong>Scale The Branches.</strong></em> You have a climbing speed equal to your walking speed. While climbing, you can take the Dash action as a bonus action.");
+    expect(result.related[1].system.description.value).toBe("<p>You have a climbing speed equal to your walking speed. While climbing, you can take the Dash action as a bonus action.</p>");
+    expect(result.primary.system.advancement.bfeLanguages0000.hint).toBe("You know Common and one other language of your choice.");
+  });
+
+  it("does not treat four-word heritage sentence starts as trait headings", () => {
     const result = parseInput("heritage", `ember scholar
-Ember scholars study fire. Ancient Elemental Legacy.
+Ember scholars study fire. Ancient Elemental Legacy Here.
 This phrase should remain description until a short trait begins.
 Fire Born.
 You resist heat.`);
     expect(result.primary.name).toBe("Ember Scholar");
     expect(result.related.map(i => i.name)).toEqual(["Fire Born"]);
     expect(result.primary.system.description.value).toContain("<p>Ember scholars study fire.</p>");
-    expect(result.primary.system.description.value).toContain("<p>Ancient Elemental Legacy.</p>");
+    expect(result.primary.system.description.value).toContain("<p>Ancient Elemental Legacy Here.</p>");
     expect(result.primary.system.description.value).toContain("<p>This phrase should remain description until a short trait begins.</p>");
   });
 
