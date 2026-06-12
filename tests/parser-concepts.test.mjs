@@ -404,6 +404,40 @@ d8 Adventuring Motivation
     expect(item.flags["black-flag-enhancements"].talentNames).toEqual(["Covert", "Critical Training", "Spell Duelist"]);
   });
 
+  it("parses Argent Rats Mercenary tool choice and buried talent list", () => {
+    const item = parseInput("background", `ARGENT RATS MERCENARY
+You were recruited by the Argent Rats, a
+group of former bandits aiming to legitimize
+themselves as a proper mercenary company.
+Skill Proficiencies: Choose two from Athletics,
+History, Insight, or Intimidation.
+Additional Proficiencies: Gain proficiency with
+woodcarver’s tools and one tool or gaming
+set of your choice.
+Equipment: A tool you are
+proficient with, an old contract,
+a dagger with a unique engraving that belonged to a fellow
+member of your mercenary band, traveler’s clothing
+including a cloak, a rank insignia denoting your ties to a
+mercenary band, and a belt pouch containing 10 gp.
+TALENT
+A life dedicated to order and hard work pays dividends.
+Choose a talent from the following list to represent
+your mercenary discipline: Armor Training, Combat
+Conditioning, or Physical Fortitude.The experience
+between mercenary work and adventuring has a lot of
+overlap.
+ADVENTURING MOTIVATION
+d8 Adventuring Motivation
+1 Adventuring is a chance to put my training to good use.`).primary;
+    expect(item.name).toBe("Argent Rats Mercenary");
+    expect(item.system.advancement.bfeSkillProfs000.configuration.choices).toEqual([{ count: 2, pool: ["skills:athletics", "skills:history", "skills:insight", "skills:intimidation"] }]);
+    expect(item.system.advancement.bfeAdditional000.hint).toBe("Gain proficiency with woodcarver’s tools and one tool or gaming set of your choice.");
+    expect(item.system.advancement.bfeAdditional000.configuration.grants).toEqual([]);
+    expect(item.system.advancement.bfeAdditional000.configuration.choices).toEqual([{ count: 1, pool: ["tools:*", "tools:gaming:*"] }]);
+    expect(item.flags["black-flag-enhancements"].talentNames).toEqual(["Armor Training", "Combat Conditioning", "Physical Fortitude"]);
+  });
+
   it("parses background equipment options and OR choices", () => {
     const item = parseInput("background", `SOLDIER
 You spent a significant amount of time risking your life to defend others.
