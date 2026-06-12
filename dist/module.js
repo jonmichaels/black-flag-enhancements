@@ -477,6 +477,27 @@ function applySource(data, source) {
   item2.system.description.source.book = source;
   return item2;
 }
+function isConceptWithFeatures(type) {
+  return ["lineage", "heritage"].includes(type);
+}
+function packFolders(pack) {
+  return Array.from(pack?.folders ?? []);
+}
+async function getOrCreatePackFolder(pack, name, parent = null) {
+  const packId = pack.metadata.id;
+  const parentId = parent?.id ?? parent ?? null;
+  const existing = packFolders(pack).find((folder) => folder.name === name && (folder.folder?.id ?? folder.folder ?? null) === parentId);
+  if (existing) return existing;
+  const [created] = await Folder.createDocuments([{ name, type: "Item", folder: parentId }], { pack: packId });
+  pack.folders?.push?.(created);
+  return created;
+}
+async function parserTargetFolders(pack, primary, selectedFolder = null) {
+  if (!isConceptWithFeatures(primary.type)) return { primaryFolder: selectedFolder, featureFolder: selectedFolder };
+  const primaryFolder = await getOrCreatePackFolder(pack, primary.name, selectedFolder);
+  const featureFolder = await getOrCreatePackFolder(pack, `${primary.name} Features`, primaryFolder);
+  return { primaryFolder: primaryFolder.id, featureFolder: featureFolder.id };
+}
 var ParsingApplication = class _ParsingApplication extends HandlebarsApplicationMixin(ApplicationV2) {
   static TYPES = PARSER_TYPES;
   static DEFAULT_OPTIONS = {
@@ -585,13 +606,14 @@ var ParsingApplication = class _ParsingApplication extends HandlebarsApplication
   }
   async saveResult(result, folder = null, source = "") {
     const packId = this.pack.metadata.id;
+    const primary = applySource(result.primary, source);
+    const { primaryFolder, featureFolder } = await parserTargetFolders(this.pack, primary, folder);
     const related = [];
     for (const data of result.related ?? []) {
-      const [created] = await Item.createDocuments([{ ...applySource(data, source), folder }], { pack: packId });
+      const [created] = await Item.createDocuments([{ ...applySource(data, source), folder: featureFolder }], { pack: packId });
       related.push(created);
     }
-    const primary = applySource(result.primary, source);
-    if (related.length && ["lineage", "heritage"].includes(primary.type)) {
+    if (related.length && isConceptWithFeatures(primary.type)) {
       primary.system ??= {};
       primary.system.advancement ??= {};
       primary.system.advancement[FEATURES_ADVANCEMENT_ID] = {
@@ -604,7 +626,7 @@ var ParsingApplication = class _ParsingApplication extends HandlebarsApplication
         type: "grantFeatures"
       };
     }
-    const [createdPrimary] = await Item.createDocuments([{ ...primary, folder }], { pack: packId });
+    const [createdPrimary] = await Item.createDocuments([{ ...primary, folder: primaryFolder }], { pack: packId });
     return createdPrimary;
   }
   static injectSidebarButton(app, html) {
