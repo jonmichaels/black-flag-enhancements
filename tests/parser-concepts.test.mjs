@@ -245,6 +245,55 @@ Retractable Claws. As a bonus action, you can extend or retract claws into your 
     expect(talent.system.type.category).toBe("martial");
   });
 
+  it("formats PDF-pasted backgrounds with advancement labels, sections, and motivation tables", () => {
+    const result = parseInput("background", `VAMPIRE HUNTER
+You trained and worked within a troupe of vampire hunters.
+You learned how to detect the presence of a vampire in a
+community, how to track it to its lair, and how to destroy
+it utterly. And you learned that vampire hunters live short,
+violent lives.
+Skill Proficiencies: Choose two from History, Insight,
+Investigation, or Sleight of Hand.
+Additional Proficiencies: Learn one additional language
+of your choice and gain proficiency with trapper tools.
+Equipment: A cloak, a set of traveler’s clothes, a backpack,
+five wooden stakes, a hand mirror, and a pouch containing
+10 gp.
+TALENT
+You have received special training combined with some
+natural ability to make you a crack vampire hunter. Choose
+a talent from this list to represent your experience: Covert,
+Critical Training, or Spell Duelist.
+ADVENTURING MOTIVATION
+Perhaps the adventuring life is an extension of your
+previous line of work. Or maybe you were the only survivor
+of a failed hunt and decided to move on to less fickle game.
+Consider what made you stop hunting vampires and take
+up a less focused life of adventuring.
+
+ADVENTURING MOTIVATION
+d8 Adventuring Motivation
+1 Any dead monster is a good monster, vampire or no. Adventuring gets that done.
+2 I honor my trainer by continuing this work in the course of adventuring.`);
+    const item = result.primary;
+    const html = item.system.description.value;
+    expect(item.type).toBe("background");
+    expect(item.name).toBe("Vampire Hunter");
+    expect(item.img).toBe("systems/black-flag/artwork/types/background.svg");
+    expect(html).toContain("<p>You trained and worked within a troupe of vampire hunters.</p>");
+    expect(html).toContain("<p>You learned how to detect the presence of a vampire in a community, how to track it to its lair, and how to destroy it utterly.</p>");
+    expect(html).toContain("<p>And you learned that vampire hunters live short, violent lives.</p>");
+    expect(html).toContain("<p><em><strong>Skill Proficiencies:</strong></em> Choose two from History, Insight, Investigation, or Sleight of Hand.</p>");
+    expect(html).toContain("<p><em><strong>Additional Proficiencies:</strong></em> Learn one additional language of your choice and gain proficiency with trapper tools.</p>");
+    expect(html).toContain("<p><em><strong>Equipment:</strong></em> A cloak, a set of traveler’s clothes, a backpack, five wooden stakes, a hand mirror, and a pouch containing 10 gp.</p>");
+    expect(html).toContain("<h4>Talent</h4>");
+    expect(html).toContain("<p>You have received special training combined with some natural ability to make you a crack vampire hunter. Choose a talent from this list to represent your experience: Covert, Critical Training, or Spell Duelist.</p>");
+    expect(html).toContain("<h4>Adventuring Motivation</h4>");
+    expect(html).toContain("<table><thead><tr><th>d8</th><th>Adventuring Motivation</th></tr></thead><tbody>");
+    expect(html).toContain("<td>1</td><td>Any dead monster is a good monster, vampire or no. Adventuring gets that done.</td>");
+    expect(html).toContain("<td>2</td><td>I honor my trainer by continuing this work in the course of adventuring.</td>");
+  });
+
   it("keeps existing parser types available", () => {
     for (const type of ["spell","ammunition","armor","weapon","enchantment","consumable","container","gear","staff"]) {
       expect(parseInput(type, "Sample Name\nMagic Item\nDescription here.").primary.name).toBe("Sample Name");

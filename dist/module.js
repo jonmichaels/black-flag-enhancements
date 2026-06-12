@@ -182,6 +182,7 @@ function titleFrom(lines) {
 }
 var LINEAGE_ICON = "systems/black-flag/artwork/types/lineage.svg";
 var HERITAGE_ICON = "systems/black-flag/artwork/types/heritage.svg";
+var BACKGROUND_ICON = "systems/black-flag/artwork/types/background.svg";
 var FEATURE_ICON = "systems/black-flag/artwork/types/feature.svg";
 var SIZE_ADVANCEMENT_ID = "bfeSize000000000";
 function baseItem(name, type, html, system = {}, img = "icons/svg/book.svg") {
@@ -401,11 +402,118 @@ function parseHeritage(input) {
     extraRelatedTraits: mutationTraits
   });
 }
+var BACKGROUND_INLINE_ADVANCEMENTS = ["Skill Proficiencies", "Additional Proficiencies", "Equipment"];
+var BACKGROUND_SECTION_HEADINGS = ["Talent", "Adventuring Motivation"];
+function backgroundInlineAdvancement(line = "") {
+  for (const label of BACKGROUND_INLINE_ADVANCEMENTS) {
+    const match = String(line).match(new RegExp(`^${label}\\s*([:.])\\s*(.*)$`, "i"));
+    if (match) return { label, punctuation: match[1], rest: match[2].trim() };
+  }
+  return null;
+}
+function backgroundSectionHeading(line = "") {
+  const normalized = toTitleCase(line);
+  return BACKGROUND_SECTION_HEADINGS.includes(normalized) ? normalized : null;
+}
+function backgroundTableRows(lines = []) {
+  const rows = [];
+  let current = null;
+  for (const line of lines) {
+    const numbered = String(line).match(/^(\d+)\s+(.+)$/);
+    const numberOnly = String(line).match(/^(\d+)$/);
+    if (numbered) {
+      if (current) rows.push({ ...current, text: normalizeInlineText(current.lines) });
+      current = { roll: numbered[1], lines: [numbered[2]] };
+    } else if (numberOnly) {
+      if (current) rows.push({ ...current, text: normalizeInlineText(current.lines) });
+      current = { roll: numberOnly[1], lines: [] };
+    } else if (current) current.lines.push(line);
+  }
+  if (current) rows.push({ ...current, text: normalizeInlineText(current.lines) });
+  return rows.filter((row) => row.roll && row.text);
+}
+function backgroundTableHtml(headerLine, lines = []) {
+  const match = String(headerLine || "").match(/^(d\d+)\s+(.+)$/i);
+  if (!match) return "";
+  const rows = backgroundTableRows(lines);
+  if (!rows.length) return "";
+  const body = rows.map((row) => `<tr><td>${escapeHTML(row.roll)}</td><td>${escapeHTML(row.text)}</td></tr>`).join("\n");
+  return `<table><thead><tr><th>${escapeHTML(match[1])}</th><th>${escapeHTML(toTitleCase(match[2]))}</th></tr></thead><tbody>
+${body}
+</tbody></table>`;
+}
+function flushBackgroundSection(section, htmlParts) {
+  if (!section) return;
+  const text = normalizeInlineText(section.lines);
+  if (text) htmlParts.push(`<p>${escapeHTML(text)}</p>`);
+}
 function parseBackground(input) {
   const lines = cleanPdfText(input);
-  const { name, body } = titleFrom(lines);
-  const html = linesToHtml(body, { traitStyle: false }).replace(/<p>(Skill Proficiencies:[^<]+)<\/p>/gi, "<h5>Skill Proficiencies</h5><p>$1</p>").replace(/<p>(Equipment:[^<]+)<\/p>/gi, "<h5>Equipment</h5><p>$1</p>").replace(/<p>(Talent:[^<]+)<\/p>/gi, "<h5>Talent</h5><p>$1</p>");
-  return { primary: baseItem(name, "background", html) };
+  const name = toTitleCase(lines[0] || "Untitled");
+  const body = lines.slice(1);
+  const htmlParts = [];
+  let intro = [];
+  let inline = null;
+  let section = null;
+  let i = 0;
+  const flushIntro = () => {
+    if (!intro.length) return;
+    htmlParts.push(linesToHtml(descriptionSentences(intro), { traitStyle: false }));
+    intro = [];
+  };
+  const flushInline = () => {
+    if (!inline) return;
+    const text = normalizeInlineText(inline.lines);
+    const label = `${inline.label}${inline.punctuation}`;
+    htmlParts.push(`<p><em><strong>${escapeHTML(label)}</strong></em>${text ? ` ${escapeHTML(text)}` : ""}</p>`);
+    inline = null;
+  };
+  const flushSection = () => {
+    flushBackgroundSection(section, htmlParts);
+    section = null;
+  };
+  while (i < body.length) {
+    const line = body[i];
+    const tableHeader = String(line).match(/^d\d+\s+adventuring motivation$/i);
+    if (tableHeader) {
+      flushIntro();
+      flushInline();
+      flushSection();
+      const tableHtml = backgroundTableHtml(line, body.slice(i + 1));
+      if (tableHtml) htmlParts.push(tableHtml);
+      break;
+    }
+    const heading = backgroundSectionHeading(line);
+    const nextIsTable = heading === "Adventuring Motivation" && /^d\d+\s+adventuring motivation$/i.test(body[i + 1] || "");
+    if (heading && !nextIsTable) {
+      flushIntro();
+      flushInline();
+      flushSection();
+      htmlParts.push(`<h4>${escapeHTML(heading)}</h4>`);
+      section = { heading, lines: [] };
+      i += 1;
+      continue;
+    }
+    if (heading && nextIsTable) {
+      i += 1;
+      continue;
+    }
+    const advancement = backgroundInlineAdvancement(line);
+    if (advancement) {
+      flushIntro();
+      flushInline();
+      flushSection();
+      inline = { ...advancement, lines: advancement.rest ? [advancement.rest] : [] };
+    } else if (inline) inline.lines.push(line);
+    else if (section) section.lines.push(line);
+    else intro.push(line);
+    i += 1;
+  }
+  flushIntro();
+  flushInline();
+  flushSection();
+  const html = htmlParts.filter(Boolean).join("\n");
+  return { primary: baseItem(name, "background", html, { identifier: { value: slugify(name) } }, BACKGROUND_ICON), related: [] };
 }
 function parseTalent(input) {
   const lines = cleanPdfText(input);
