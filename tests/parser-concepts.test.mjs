@@ -119,6 +119,49 @@ into one living tree within your reach.`);
     expect(result.related).toEqual([]);
   });
 
+  it("parses heritage PDF text like lineage text with related heritage trait features", () => {
+    const result = parseInput("heritage", `sky dancer
+You were raised among cliff dwellers
+and wind temples. Your people leap before they walk.
+Glide.
+You can slow your fall and drift
+up to 30 feet horizontally. You land safely.
+Languages.
+You can speak, read, and write Common and Auran.
+Cloud Step.
+You can move across mist
+as though it were solid ground.`);
+    const description = result.primary.system.description.value;
+    expect(result.primary.type).toBe("heritage");
+    expect(result.primary.name).toBe("Sky Dancer");
+    expect(description).toContain("<p>You were raised among cliff dwellers and wind temples.</p>");
+    expect(description).toContain("<p>Your people leap before they walk.</p>");
+    expect(description).toContain("<em><strong>Glide.</strong></em> You can slow your fall and drift up to 30 feet horizontally. You land safely.");
+    expect(description).toContain("<em><strong>Languages.</strong></em> You can speak, read, and write Common and Auran.");
+    expect(description).toContain("<em><strong>Cloud Step.</strong></em> You can move across mist as though it were solid ground.");
+    expect(result.related.map(i => i.name)).toEqual(["Glide", "Languages", "Cloud Step"]);
+    expect(result.related.map(i => i.type)).toEqual(["feature", "feature", "feature"]);
+    expect(result.related.map(i => i.system.type.category)).toEqual(["heritage", "heritage", "heritage"]);
+    expect(result.related[0].system.description.value).toBe("<p>You can slow your fall and drift up to 30 feet horizontally. You land safely.</p>");
+    expect(result.related[2].system.description.value).toBe("<p>You can move across mist as though it were solid ground.</p>");
+    expect(result.primary.system.advancement.bfeLanguages0000.type).toBe("trait");
+    expect(result.primary.system.advancement.bfeLanguages0000.title).toBe("Languages");
+    expect(result.primary.system.advancement.bfeLanguages0000.hint).toBe("You can speak, read, and write Common and Auran.");
+  });
+
+  it("does not treat three-word heritage sentence starts as trait headings", () => {
+    const result = parseInput("heritage", `ember scholar
+Ember scholars study fire. Ancient Elemental Legacy.
+This phrase should remain description until a short trait begins.
+Fire Born.
+You resist heat.`);
+    expect(result.primary.name).toBe("Ember Scholar");
+    expect(result.related.map(i => i.name)).toEqual(["Fire Born"]);
+    expect(result.primary.system.description.value).toContain("<p>Ember scholars study fire.</p>");
+    expect(result.primary.system.description.value).toContain("<p>Ancient Elemental Legacy.</p>");
+    expect(result.primary.system.description.value).toContain("<p>This phrase should remain description until a short trait begins.</p>");
+  });
+
   it("parses heritage/background/talent as valid Black Flag item types", () => {
     expect(parseInput("heritage", "Aerobat\nYou are at home in high places.\nDescender. You can slow your fall.").primary.type).toBe("heritage");
     expect(parseInput("background", "Vampire Hunter\nYou hunt creatures of the night.\nSkill Proficiencies: Choose two.\nEquipment: A stake.\nTalent: Choose one martial talent.").primary.type).toBe("background");

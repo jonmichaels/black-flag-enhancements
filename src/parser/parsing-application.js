@@ -183,7 +183,7 @@ export class ParsingApplication extends HandlebarsApplicationMixin(ApplicationV2
       related.push(created);
     }
     const primary = applySource(result.primary, source);
-    if (related.length && primary.type === "lineage") {
+    if (related.length && ["lineage", "heritage"].includes(primary.type)) {
       primary.system ??= {};
       primary.system.advancement ??= {};
       primary.system.advancement[FEATURES_ADVANCEMENT_ID] = {

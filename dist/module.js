@@ -148,7 +148,8 @@ function commonTraitEnhancement(trait) {
 }
 
 // src/parser/concept-parsers.js
-var TRAIT_SKIP = /* @__PURE__ */ new Set(["age", "size", "speed"]);
+var LINEAGE_TRAIT_SKIP = /* @__PURE__ */ new Set(["age", "size", "speed"]);
+var HERITAGE_LANGUAGE_ADVANCEMENT_ID = "bfeLanguages0000";
 function toTitleCase(value = "") {
   return String(value).trim().toLowerCase().replace(/\b[\p{L}\p{N}'’]+/gu, (word) => word.charAt(0).toUpperCase() + word.slice(1));
 }
@@ -185,12 +186,12 @@ var SIZE_ADVANCEMENT_ID = "bfeSize000000000";
 function baseItem(name, type, html, system = {}, img = "icons/svg/book.svg") {
   return { name, type, img, system: { description: makeDescription(html), ...system } };
 }
-function parseTraitStart(line) {
+function parseTraitStart(line, { maxWords = 4 } = {}) {
   const match = String(line || "").trim().match(/^([^.:]{2,80})\.\s*(.*)$/);
   if (!match) return null;
   const name = match[1].trim();
   const words = name.split(/\s+/).filter(Boolean);
-  if (words.length > 4) return null;
+  if (words.length > maxWords) return null;
   if (!/^\p{Lu}/u.test(name)) return null;
   if (/^(and|but|or|when|while|where|because|by|with|without|you|your|the|a|an)\b/i.test(name)) return null;
   return { name: toTitleCase(name), rest: match[2].trim() };
@@ -198,12 +199,12 @@ function parseTraitStart(line) {
 function endsSentence(line = "") {
   return /[.!?]["”’)]?$/.test(String(line || "").trim());
 }
-function splitTraits(lines) {
+function splitTraits(lines, { maxWords = 4 } = {}) {
   const traits = [];
   let current = null;
   let previousLine = "";
   for (const line of lines) {
-    const match = parseTraitStart(line);
+    const match = parseTraitStart(line, { maxWords });
     if (match && (!current || endsSentence(previousLine))) {
       if (current) traits.push({ ...current, text: normalizeInlineText(current.lines) });
       current = { name: match.name, lines: [] };
@@ -220,12 +221,12 @@ function traitLine(trait) {
 function slugify(value = "") {
   return String(value).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
-function featureItem(trait, lineageName) {
+function featureItem(trait, parentName, category = "lineage") {
   const enhancement = commonTraitEnhancement(trait);
   return baseItem(trait.name, "feature", linesToHtml([trait.text], { traitStyle: false }), {
-    identifier: { associated: slugify(lineageName), value: slugify(trait.name) },
-    type: { category: "lineage", value: "" },
-    source: lineageName,
+    identifier: { associated: slugify(parentName), value: slugify(trait.name) },
+    type: { category, value: "" },
+    source: parentName,
     ...enhancement.system ?? {}
   }, enhancement.img ?? FEATURE_ICON);
 }
@@ -250,41 +251,89 @@ function sizeAdvancement(trait) {
     type: "size"
   };
 }
+function languageAdvancement(trait) {
+  if (!trait || !/^languages$/i.test(trait.name)) return null;
+  return {
+    _id: HERITAGE_LANGUAGE_ADVANCEMENT_ID,
+    configuration: {
+      choices: [],
+      grants: [],
+      mode: "default",
+      choiceMode: "inclusive"
+    },
+    flags: {},
+    hint: trait.text,
+    icon: null,
+    level: { value: null },
+    title: "Languages",
+    type: "trait"
+  };
+}
+function parseTraitSection({ name, type, before, traitLines, category, skippedTraits = /* @__PURE__ */ new Set(), header = null, img = "icons/svg/book.svg", extraAdvancement = () => null, maxTraitWords = 4 }) {
+  const traits = splitTraits(traitLines, { maxWords: maxTraitWords });
+  const related = [];
+  const traitBlocks = [];
+  const advancement = {};
+  for (const trait of traits) {
+    const key = trait.name.toLowerCase();
+    const extra = extraAdvancement(trait);
+    if (extra) advancement[extra._id] = extra;
+    if (key === "size") {
+      const size = sizeAdvancement(trait);
+      if (size) advancement[SIZE_ADVANCEMENT_ID] = size;
+      traitBlocks.push(traitLine(trait));
+    } else if (skippedTraits.has(key)) traitBlocks.push(traitLine(trait));
+    else {
+      traitBlocks.push(traitLine(trait));
+      related.push(featureItem(trait, name, category));
+    }
+  }
+  const htmlParts = [linesToHtml(descriptionSentences(before))];
+  if (header) htmlParts.push(`<h4>${escapeHTML(header)}</h4>`);
+  htmlParts.push(linesToHtml(traitBlocks));
+  const html = htmlParts.filter(Boolean).join("\n");
+  return { primary: baseItem(name, type, html, { advancement, identifier: { value: slugify(name) } }, img), related };
+}
+function findHeritageTraitStart(lines = []) {
+  for (let i = 0; i < lines.length; i += 1) {
+    const match = parseTraitStart(lines[i], { maxWords: 2 });
+    const previous = lines[i - 1] ?? "";
+    if (match && i > 0 && endsSentence(previous)) return i;
+  }
+  return -1;
+}
 function parseLineage(input) {
   const lines = cleanPdfText(input);
   const name = toTitleCase(lines[0] || "Untitled");
   const body = lines.slice(1);
   const marker = body.findIndex((l) => isLineageMarker(l, name));
   if (marker < 0) return { primary: baseItem(name, "lineage", linesToHtml(descriptionSentences(body)), { identifier: { value: slugify(name) } }, LINEAGE_ICON), related: [] };
-  const before = body.slice(0, marker);
-  const traitLines = body.slice(marker + 1);
-  const traits = splitTraits(traitLines);
-  const related = [];
-  const traitBlocks = [];
-  const advancement = {};
-  for (const trait of traits) {
-    const key = trait.name.toLowerCase();
-    if (key === "size") {
-      const size = sizeAdvancement(trait);
-      if (size) advancement[SIZE_ADVANCEMENT_ID] = size;
-      traitBlocks.push(traitLine(trait));
-    } else if (TRAIT_SKIP.has(key)) traitBlocks.push(traitLine(trait));
-    else {
-      traitBlocks.push(traitLine(trait));
-      related.push(featureItem(trait, name));
-    }
-  }
-  const html = [
-    linesToHtml(descriptionSentences(before)),
-    `<h4>${escapeHTML(`${name} Lineage Traits`)}</h4>`,
-    linesToHtml(traitBlocks)
-  ].filter(Boolean).join("\n");
-  return { primary: baseItem(name, "lineage", html, { advancement, identifier: { value: slugify(name) } }, LINEAGE_ICON), related };
+  return parseTraitSection({
+    name,
+    type: "lineage",
+    before: body.slice(0, marker),
+    traitLines: body.slice(marker + 1),
+    category: "lineage",
+    skippedTraits: LINEAGE_TRAIT_SKIP,
+    header: `${name} Lineage Traits`,
+    img: LINEAGE_ICON
+  });
 }
 function parseHeritage(input) {
   const lines = cleanPdfText(input);
-  const { name, body } = titleFrom(lines);
-  return { primary: baseItem(name, "heritage", linesToHtml(body)) };
+  const name = toTitleCase(lines[0] || "Untitled");
+  const body = lines.slice(1);
+  const traitStart = findHeritageTraitStart(body);
+  if (traitStart < 0) return { primary: baseItem(name, "heritage", linesToHtml(descriptionSentences(body)), { identifier: { value: slugify(name) } }), related: [] };
+  return parseTraitSection({
+    name,
+    type: "heritage",
+    before: body.slice(0, traitStart),
+    traitLines: body.slice(traitStart),
+    category: "heritage",
+    extraAdvancement: languageAdvancement,
+    maxTraitWords: 2
+  });
 }
 function parseBackground(input) {
   const lines = cleanPdfText(input);
@@ -539,7 +588,7 @@ var ParsingApplication = class _ParsingApplication extends HandlebarsApplication
       related.push(created);
     }
     const primary = applySource(result.primary, source);
-    if (related.length && primary.type === "lineage") {
+    if (related.length && ["lineage", "heritage"].includes(primary.type)) {
       primary.system ??= {};
       primary.system.advancement ??= {};
       primary.system.advancement[FEATURES_ADVANCEMENT_ID] = {
