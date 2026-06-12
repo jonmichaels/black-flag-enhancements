@@ -438,6 +438,27 @@ d8 Adventuring Motivation
     expect(item.flags["black-flag-enhancements"].talentNames).toEqual(["Armor Training", "Combat Conditioning", "Physical Fortitude"]);
   });
 
+  it("parses Caravan Raider type-of-tool or gaming-set choice", () => {
+    const item = parseInput("background", `CARAVAN RAIDER
+You are the scourge of caravans and merchants.
+Skill Proficiencies: Choose two from Athletics,
+Intimidation, Investigation, or Perception.
+Additional Proficiencies: Gain proficiency with
+cartographer’s tools and one type of tool or
+gaming set of your choice.
+TALENT
+Choose a talent from the following list to represent your strategic
+and physical tact: Opportunist, Quick, or Scrutinous.
+ADVENTURING MOTIVATION
+d8 Adventuring Motivation
+1 Adventuring is the gateway to even more riches.`).primary;
+    expect(item.name).toBe("Caravan Raider");
+    expect(item.system.advancement.bfeAdditional000.hint).toBe("Gain proficiency with cartographer’s tools and one type of tool or gaming set of your choice.");
+    expect(item.system.advancement.bfeAdditional000.configuration.grants).toEqual([]);
+    expect(item.system.advancement.bfeAdditional000.configuration.choices).toEqual([{ count: 1, pool: ["tools:*", "tools:gaming:*"] }]);
+    expect(item.flags["black-flag-enhancements"].talentNames).toEqual(["Opportunist", "Quick", "Scrutinous"]);
+  });
+
   it("parses background equipment options and OR choices", () => {
     const item = parseInput("background", `SOLDIER
 You spent a significant amount of time risking your life to defend others.

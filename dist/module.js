@@ -650,7 +650,7 @@ function backgroundSkillAdvancement(text = "") {
 function backgroundAdditionalAdvancement(text = "") {
   const choices = [];
   if (/\badditional language\b|\blanguage of your choice\b/i.test(text)) choices.push({ count: numberFromText(text, 1), pool: ["languages:*"] });
-  if (/\bone\s+tool\s+or\s+gaming\s+set\s+of\s+your\s+choice\b/i.test(text)) choices.push({ count: 1, pool: ["tools:*", "tools:gaming:*"] });
+  if (/\bone\s+(?:type\s+of\s+)?tool\s+or\s+gaming\s+set\s+of\s+your\s+choice\b/i.test(text)) choices.push({ count: 1, pool: ["tools:*", "tools:gaming:*"] });
   return {
     _id: BACKGROUND_ADVANCEMENT_IDS.additional,
     configuration: { choiceMode: "inclusive", choices, grants: toolGrantKeysFromText(text), mode: "default" },
