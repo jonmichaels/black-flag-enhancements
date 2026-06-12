@@ -581,13 +581,23 @@ function talentNamesFromText(text = "") {
   const source = String(text);
   const match = source.match(/choose\s+a\s+talent[^:]*:\s*([^.]*)/i) ?? source.match(/:\s*([^:.]+?)\.?$/);
   if (!match) return [];
-  return match[1].split(/,|\bor\b/i).map((part) => toTitleCase(part)).filter(Boolean);
+  return match[1].split(/,|\bor\b|\band\b/i).map((part) => toTitleCase(part)).filter(Boolean);
 }
-function toolGrantKeysFromText(text = "") {
+function toolChoicePoolsFromText(text = "") {
+  const choices = [];
+  if (/\bone\s+(?:type\s+of\s+)?tool\s+or\s+gaming\s+set\s+of\s+your\s+choice\b/i.test(text)) choices.push({ count: 1, pool: ["tools:*", "tools:gaming:*"] });
+  if (/\bone\s+(?:other\s+)?tool\s+or\s+instrument\s+of\s+your\s+choice\b/i.test(text)) choices.push({ count: 1, pool: ["tools:*", "tools:musicalInstrument:*"] });
+  if (/\bartist\s+tools\s+or\s+a\s+musical\s+instrument\b/i.test(text)) choices.push({ count: 1, pool: ["tools:artist", "tools:musicalInstrument:*"] });
+  return choices;
+}
+function toolGrantKeysFromText(text = "", choicePools = []) {
   const normalized = String(text).toLowerCase();
+  const choiceKeys = new Set(choicePools.flatMap((choice) => choice.pool).filter((key) => !key.endsWith(":*")));
   const grants = [];
   for (const [label, key] of Object.entries(TOOL_NAME_KEYS)) {
-    if (new RegExp(`\\b${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/ /g, "\\s+")}\\b`, "i").test(normalized)) grants.push(`tools:${key}`);
+    const grantKey = `tools:${key}`;
+    if (choiceKeys.has(grantKey)) continue;
+    if (new RegExp(`\\b${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/ /g, "\\s+")}\\b`, "i").test(normalized)) grants.push(grantKey);
   }
   return [...new Set(grants)];
 }
@@ -650,11 +660,10 @@ function backgroundSkillAdvancement(text = "") {
 function backgroundAdditionalAdvancement(text = "") {
   const choices = [];
   if (/\badditional language\b|\blanguage of your choice\b/i.test(text)) choices.push({ count: numberFromText(text, 1), pool: ["languages:*"] });
-  if (/\bone\s+(?:type\s+of\s+)?tool\s+or\s+gaming\s+set\s+of\s+your\s+choice\b/i.test(text)) choices.push({ count: 1, pool: ["tools:*", "tools:gaming:*"] });
-  if (/\bone\s+(?:other\s+)?tool\s+or\s+instrument\s+of\s+your\s+choice\b/i.test(text)) choices.push({ count: 1, pool: ["tools:*", "tools:musicalInstrument:*"] });
+  choices.push(...toolChoicePoolsFromText(text));
   return {
     _id: BACKGROUND_ADVANCEMENT_IDS.additional,
-    configuration: { choiceMode: "inclusive", choices, grants: toolGrantKeysFromText(text), mode: "default" },
+    configuration: { choiceMode: "inclusive", choices, grants: toolGrantKeysFromText(text, choices), mode: "default" },
     flags: {},
     hint: text,
     icon: null,

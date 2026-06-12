@@ -480,6 +480,32 @@ d8 Adventuring Motivation
     expect(item.flags["black-flag-enhancements"].talentNames).toEqual(["Bottomless Luck", "Polyglot", "Psycanist"]);
   });
 
+  it("parses Venerator language plus artist-or-instrument choice and and-separated talents", () => {
+    const item = parseInput("background", `VENERATOR
+Before you became an adventurer, you trained to honor those who came before.
+Skill Proficiencies: Choose two from History,
+Insight, Performance, or Religion.
+Additional Proficiencies: Learn one additional
+language of your choice and gain proficiency with
+artist tools or a musical instrument.
+TALENT
+You’ve had special training combined with some natural
+ability to make you an outstanding venerator. Choose
+a talent from this list to represent your experience:
+Comrade, Ritualist, and Scrutinous.
+ADVENTURING MOTIVATION
+d8 Adventuring Motivation
+1 Adventuring is all I have left after a terrible mistake.`).primary;
+    expect(item.name).toBe("Venerator");
+    expect(item.system.advancement.bfeAdditional000.hint).toBe("Learn one additional language of your choice and gain proficiency with artist tools or a musical instrument.");
+    expect(item.system.advancement.bfeAdditional000.configuration.grants).toEqual([]);
+    expect(item.system.advancement.bfeAdditional000.configuration.choices).toEqual([
+      { count: 1, pool: ["languages:*"] },
+      { count: 1, pool: ["tools:artist", "tools:musicalInstrument:*"] }
+    ]);
+    expect(item.flags["black-flag-enhancements"].talentNames).toEqual(["Comrade", "Ritualist", "Scrutinous"]);
+  });
+
   it("parses background equipment options and OR choices", () => {
     const item = parseInput("background", `SOLDIER
 You spent a significant amount of time risking your life to defend others.
