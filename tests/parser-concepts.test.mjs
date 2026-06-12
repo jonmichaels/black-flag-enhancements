@@ -73,6 +73,40 @@ Equine Build. You count as one size larger when determining carrying capacity.`)
     expect(result.related.map(i => i.name)).toEqual(["Equine Build"]);
   });
 
+  it("formats Dragonborn Draconic Ancestry table and keeps following traits separate", () => {
+    const result = parseInput("lineage", `Dragonborn
+Descended from mighty dragons, dragonborn are draconic humanoids.
+Dragonborn Lineage Traits
+Age. Dragonborn grow quickly.
+Size. Your size is Medium.
+Speed. Your base walking speed is 30 feet.
+Breath Weapon. As a bonus action, you can exhale magical energy.
+Draconic Ancestry. You have draconic ancestry. Choose
+one type of dragon from the Draconic Ancestry table. Your
+dragon type determines your Breath Weapon damage type
+and damage resistance.
+Draconic Ancestry
+Dragon Type Damage Type
+Black or Copper Acid
+Blue or Bronze Lightning
+Brass, Gold, or Red Fire
+Green Poison
+Silver or White Cold
+Void Necrotic
+Yellow Radiant
+Dragon Hide. You have resistance to the damage type
+associated with your draconic ancestry.
+Dragon Sight. You have darkvision to a range of 60 feet
+and keensense to a range of 10 feet.`);
+    const description = result.primary.system.description.value;
+    expect(result.related.map(i => i.name)).toEqual(["Breath Weapon", "Draconic Ancestry", "Dragon Hide", "Dragon Sight"]);
+    expect(description).toContain("<h5>Draconic Ancestry</h5>");
+    expect(description).toContain("<th>Dragon Type</th><th>Damage Type</th>");
+    expect(description).toContain("<td>Brass, Gold, or Red</td><td>Fire</td>");
+    expect(description).toContain("<em><strong>Dragon Hide.</strong></em> You have resistance to the damage type associated with your draconic ancestry.");
+    expect(result.related.find(i => i.name === "Draconic Ancestry").system.description.value).toContain("<td>Yellow</td><td>Radiant</td>");
+  });
+
   it("parses Dhampir default walking speed plus 30-foot climbing speed", () => {
     const result = parseInput("lineage", `Dhampir
 Dhampirs are the improbable children of vampires and humans.

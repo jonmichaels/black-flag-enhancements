@@ -368,6 +368,28 @@ function extractWastelanderMutations(name, lines = []) {
     mutationTraits: mutationRowTraits(mutationLines)
   };
 }
+function draconicAncestryTableHtml(lines = []) {
+  const damageTypes = "Acid|Lightning|Fire|Poison|Cold|Necrotic|Radiant";
+  const rows = lines.map((line) => String(line).match(new RegExp(`^(.+?)\\s+(${damageTypes})$`, "i"))).filter(Boolean).map((match) => ({ dragon: normalizeInlineText([match[1]]), damage: toTitleCase(match[2]) }));
+  if (!rows.length) return "";
+  const body = rows.map((row) => `<tr><td>${escapeHTML(row.dragon)}</td><td>${escapeHTML(row.damage)}</td></tr>`).join("\n");
+  return `<h5>Draconic Ancestry</h5>
+<table><thead><tr><th>Dragon Type</th><th>Damage Type</th></tr></thead><tbody>
+${body}
+</tbody></table>`;
+}
+function extractDraconicAncestryTable(lines = []) {
+  const titleIndex = lines.findIndex((line, index) => /^draconic ancestry$/i.test(line) && /^dragon type\s+damage type$/i.test(lines[index + 1] ?? ""));
+  if (titleIndex < 0) return { traitLines: lines, tableHtml: "" };
+  let end = titleIndex + 2;
+  while (end < lines.length && !parseTraitStart(lines[end], { maxWords: 4 })) end += 1;
+  const tableHtml = draconicAncestryTableHtml(lines.slice(titleIndex + 2, end));
+  if (!tableHtml) return { traitLines: lines, tableHtml: "" };
+  return {
+    traitLines: [...lines.slice(0, titleIndex), ...lines.slice(end)],
+    tableHtml
+  };
+}
 function attachTraitHtml(traits, traitName, html) {
   if (!html) return;
   const trait = traits.find((t) => t.name.toLowerCase() === traitName.toLowerCase());
@@ -465,15 +487,17 @@ function parseLineage(input) {
   const body = lines.slice(1);
   const marker = body.findIndex((l) => isLineageMarker(l, name));
   if (marker < 0) return { primary: baseItem(name, "lineage", linesToHtml(descriptionSentences(body)), { identifier: { value: slugify(name) } }, LINEAGE_ICON), related: [] };
+  const { traitLines, tableHtml } = extractDraconicAncestryTable(body.slice(marker + 1));
   return parseTraitSection({
     name,
     type: "lineage",
     before: body.slice(0, marker),
-    traitLines: body.slice(marker + 1),
+    traitLines,
     category: "lineage",
     skippedTraits: LINEAGE_TRAIT_SKIP,
     header: `${name} Lineage Traits`,
-    img: LINEAGE_ICON
+    img: LINEAGE_ICON,
+    extraTraitHtml: { traitName: "Draconic Ancestry", html: tableHtml }
   });
 }
 function parseHeritage(input) {
