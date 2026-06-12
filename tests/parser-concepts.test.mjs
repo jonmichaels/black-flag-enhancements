@@ -185,6 +185,43 @@ You resist heat.`);
     expect(result.primary.system.description.value).toContain("<p>This phrase should remain description until a short trait begins.</p>");
   });
 
+  it("keeps Wastelander Mutations table with Beneficial Mutation and out of separate feature parsing", () => {
+    const result = parseInput("heritage", `WASTELANDER
+Wastelander heritage characters have been raised to survive
+in hostile, magically blasted wastes. They are tough as old
+boot leather.
+Beneficial Mutation. Your life in a magical wasteland has
+caused your body to mutate. Choose a mutation from the
+Wastelander Mutations table or roll a d6 to randomly
+determine your mutation.
+Slow Metabolism. You require only half the normal
+amount of food and water.
+Sufficiency. You have proficiency in either the Religion or
+Survival skill.
+Languages. You know Common and one additional
+language of your choice. Typical wastelander heritage
+characters choose Goblin.
+
+WASTELANDER MUTATIONS
+d6 Mutation
+1 Alien Mind. You have advantage on saves against being charmed, and you are resistant to psychic damage.
+2
+Retractable Claws. As a bonus action, you can extend or retract claws into your fingertips.
+3 Long Limbs. Your walking speed increases by 10 feet.
+4 Temblor. You have tremorsense to a range of 10 feet.
+5 Radiation Eater. You have advantage on saves against being poisoned, and you are resistant to poison damage.
+6 Thickened Skin. You are resistant to acid, cold, fire, or lightning damage.`);
+    expect(result.primary.name).toBe("Wastelander");
+    expect(result.related.map(i => i.name)).toEqual(["Beneficial Mutation", "Slow Metabolism", "Sufficiency"]);
+    expect(result.related[0].system.description.value).toContain("<h5>Wastelander Mutations</h5>");
+    expect(result.related[0].system.description.value).toContain("<td>1</td>");
+    expect(result.related[0].system.description.value).toContain("Alien Mind. You have advantage on saves against being charmed");
+    expect(result.related[0].system.description.value).toContain("Retractable Claws. As a bonus action");
+    expect(result.primary.system.description.value).toContain("<h5>Wastelander Mutations</h5>");
+    expect(result.primary.system.description.value).not.toContain("<em><strong>Wastelander Mutations.</strong></em>");
+    expect(result.primary.system.advancement.bfeLanguages0000.hint).toBe("You know Common and one additional language of your choice. Typical wastelander heritage characters choose Goblin.");
+  });
+
   it("parses heritage/background/talent as valid Black Flag item types", () => {
     expect(parseInput("heritage", "Aerobat\nYou are at home in high places.\nDescender. You can slow your fall.").primary.type).toBe("heritage");
     expect(parseInput("background", "Vampire Hunter\nYou hunt creatures of the night.\nSkill Proficiencies: Choose two.\nEquipment: A stake.\nTalent: Choose one martial talent.").primary.type).toBe("background");

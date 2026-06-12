@@ -94,7 +94,8 @@ function slugify(value = "") {
 
 function featureItem(trait, parentName, category = "lineage") {
   const enhancement = commonTraitEnhancement(trait);
-  return baseItem(trait.name, "feature", linesToHtml([trait.text], { traitStyle: false }), {
+  const html = [linesToHtml([trait.text], { traitStyle: false }), trait.html].filter(Boolean).join("\n");
+  return baseItem(trait.name, "feature", html, {
     identifier: { associated: slugify(parentName), value: slugify(trait.name) },
     type: { category, value: "" },
     source: parentName,
@@ -144,8 +145,55 @@ function languageAdvancement(trait) {
   };
 }
 
-function parseTraitSection({ name, type, before, traitLines, category, skippedTraits = new Set(), header = null, img = "icons/svg/book.svg", extraAdvancement = () => null, maxTraitWords = 4 }) {
+function parseMutationRows(lines = []) {
+  const rows = [];
+  let current = null;
+  for (const line of lines) {
+    if (/^d6\s+mutation$/i.test(line)) continue;
+    const numbered = String(line).match(/^(\d+)\s+(.+)$/);
+    const numberOnly = String(line).match(/^(\d+)$/);
+    if (numbered) {
+      if (current) rows.push({ ...current, text: normalizeInlineText(current.lines) });
+      current = { roll: numbered[1], lines: [numbered[2]] };
+    } else if (numberOnly) {
+      if (current) rows.push({ ...current, text: normalizeInlineText(current.lines) });
+      current = { roll: numberOnly[1], lines: [] };
+    } else if (current) current.lines.push(line);
+  }
+  if (current) rows.push({ ...current, text: normalizeInlineText(current.lines) });
+  return rows.filter(row => row.roll && row.text);
+}
+
+function mutationTableHtml(title, lines = []) {
+  const rows = parseMutationRows(lines);
+  if (!rows.length) return "";
+  const body = rows.map(row => `<tr><td>${escapeHTML(row.roll)}</td><td>${escapeHTML(row.text)}</td></tr>`).join("\n");
+  return `<h5>${escapeHTML(toTitleCase(title))}</h5>\n<table><thead><tr><th>d6</th><th>Mutation</th></tr></thead><tbody>\n${body}\n</tbody></table>`;
+}
+
+function extractWastelanderMutations(name, lines = []) {
+  if (slugify(name) !== "wastelander") return { traitLines: lines, mutationHtml: "" };
+  const marker = lines.findIndex(line => /^wastelander mutations$/i.test(line));
+  if (marker < 0) return { traitLines: lines, mutationHtml: "" };
+  return {
+    traitLines: lines.slice(0, marker),
+    mutationHtml: mutationTableHtml(lines[marker], lines.slice(marker + 1))
+  };
+}
+
+function attachTraitHtml(traits, traitName, html) {
+  if (!html) return;
+  const trait = traits.find(t => t.name.toLowerCase() === traitName.toLowerCase());
+  if (trait) trait.html = [trait.html, html].filter(Boolean).join("\n");
+}
+
+function traitHtml(trait) {
+  return [linesToHtml([traitLine(trait)]), trait.html].filter(Boolean).join("\n");
+}
+
+function parseTraitSection({ name, type, before, traitLines, category, skippedTraits = new Set(), header = null, img = "icons/svg/book.svg", extraAdvancement = () => null, maxTraitWords = 4, extraTraitHtml = null }) {
   const traits = splitTraits(traitLines, { maxWords: maxTraitWords });
+  if (extraTraitHtml) attachTraitHtml(traits, extraTraitHtml.traitName, extraTraitHtml.html);
   const related = [];
   const traitBlocks = [];
   const advancement = {};
@@ -156,16 +204,16 @@ function parseTraitSection({ name, type, before, traitLines, category, skippedTr
     if (key === "size") {
       const size = sizeAdvancement(trait);
       if (size) advancement[SIZE_ADVANCEMENT_ID] = size;
-      traitBlocks.push(traitLine(trait));
-    } else if (skippedTraits.has(key)) traitBlocks.push(traitLine(trait));
+      traitBlocks.push(traitHtml(trait));
+    } else if (skippedTraits.has(key)) traitBlocks.push(traitHtml(trait));
     else {
-      traitBlocks.push(traitLine(trait));
+      traitBlocks.push(traitHtml(trait));
       related.push(featureItem(trait, name, category));
     }
   }
   const htmlParts = [linesToHtml(descriptionSentences(before))];
   if (header) htmlParts.push(`<h4>${escapeHTML(header)}</h4>`);
-  htmlParts.push(linesToHtml(traitBlocks));
+  htmlParts.push(traitBlocks.join("\n"));
   const html = htmlParts.filter(Boolean).join("\n");
   return { primary: baseItem(name, type, html, { advancement, identifier: { value: slugify(name) } }, img), related };
 }
@@ -203,16 +251,18 @@ export function parseHeritage(input) {
   const body = lines.slice(1);
   const traitStart = findHeritageTraitStart(body);
   if (traitStart < 0) return { primary: baseItem(name, "heritage", linesToHtml(descriptionSentences(body)), { identifier: { value: slugify(name) } }, HERITAGE_ICON), related: [] };
+  const { traitLines, mutationHtml } = extractWastelanderMutations(name, body.slice(traitStart));
   return parseTraitSection({
     name,
     type: "heritage",
     before: body.slice(0, traitStart),
-    traitLines: body.slice(traitStart),
+    traitLines,
     category: "heritage",
     skippedTraits: new Set(["languages"]),
     extraAdvancement: languageAdvancement,
     maxTraitWords: 3,
-    img: HERITAGE_ICON
+    img: HERITAGE_ICON,
+    extraTraitHtml: { traitName: "Beneficial Mutation", html: mutationHtml }
   });
 }
 
