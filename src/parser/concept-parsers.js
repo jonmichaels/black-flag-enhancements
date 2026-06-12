@@ -20,7 +20,7 @@ function descriptionSentences(lines = []) {
 
 function isLineageMarker(line, name) {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`^(?:${escaped}\\s+)?lineage\\s+traits$`, "i").test(String(line || "").trim());
+  return new RegExp(`^(?:${escaped}s?\\s+)?lineage\\s+traits$`, "i").test(String(line || "").trim());
 }
 
 export function cleanPdfText(input = "") {
@@ -42,11 +42,21 @@ function titleFrom(lines) {
   return { name: idx >= 0 ? lines[idx] : (lines[0] || "Untitled"), body: lines.slice(idx + 1) };
 }
 
+const SINGULAR_LINEAGE_NAMES = new Map([
+  ["centaurs", "Centaur"]
+]);
+
+function normalizeLineageName(name = "") {
+  const title = toTitleCase(name);
+  return SINGULAR_LINEAGE_NAMES.get(title.toLowerCase()) ?? title;
+}
+
 const LINEAGE_ICON = "systems/black-flag/artwork/types/lineage.svg";
 const HERITAGE_ICON = "systems/black-flag/artwork/types/heritage.svg";
 const BACKGROUND_ICON = "systems/black-flag/artwork/types/background.svg";
 const FEATURE_ICON = "systems/black-flag/artwork/types/feature.svg";
 const SIZE_ADVANCEMENT_ID = "bfeSize000000000";
+const SPEED_ADVANCEMENT_ID = "bfeSpeed00000000";
 const FEATURES_ADVANCEMENT_ID = "bfeFeatures00000";
 
 function baseItem(name, type, html, system = {}, img = "icons/svg/book.svg") {
@@ -109,6 +119,7 @@ function parseSizeOptions(text = "") {
   const options = [];
   if (/\bsmall\b/.test(normalized)) options.push("small");
   if (/\bmedium\b/.test(normalized)) options.push("medium");
+  if (/\blarge\b/.test(normalized)) options.push("large");
   return options.length ? options : [];
 }
 
@@ -124,6 +135,27 @@ function sizeAdvancement(trait) {
     level: { value: null },
     title: "",
     type: "size"
+  };
+}
+
+function parseSpeedValue(text = "") {
+  const match = String(text).match(/\b(\d+)\s*(?:feet|foot|ft\.?)\b/i);
+  const speed = match ? Number(match[1]) : null;
+  return Number.isFinite(speed) ? speed : null;
+}
+
+function speedAdvancement(trait) {
+  const speed = parseSpeedValue(trait?.text ?? "");
+  if (!speed || speed === 30) return null;
+  return {
+    _id: SPEED_ADVANCEMENT_ID,
+    configuration: { changes: [{ key: "system.traits.movement.base", mode: 5, value: String(speed) }] },
+    flags: {},
+    hint: traitLine(trait),
+    icon: null,
+    level: { value: 0, classIdentifier: "" },
+    title: "Speed",
+    type: "property"
   };
 }
 
@@ -218,6 +250,10 @@ function parseTraitSection({ name, type, before, traitLines, category, skippedTr
       const size = sizeAdvancement(trait);
       if (size) advancement[SIZE_ADVANCEMENT_ID] = size;
       traitBlocks.push(traitHtml(trait));
+    } else if (key === "speed") {
+      const speed = speedAdvancement(trait);
+      if (speed) advancement[SPEED_ADVANCEMENT_ID] = speed;
+      traitBlocks.push(traitHtml(trait));
     } else if (skippedTraits.has(key)) traitBlocks.push(traitHtml(trait));
     else {
       traitBlocks.push(traitHtml(trait));
@@ -245,7 +281,7 @@ function findHeritageTraitStart(lines = []) {
 
 export function parseLineage(input) {
   const lines = cleanPdfText(input);
-  const name = toTitleCase(lines[0] || "Untitled");
+  const name = normalizeLineageName(lines[0] || "Untitled");
   const body = lines.slice(1);
   const marker = body.findIndex(l => isLineageMarker(l, name));
   if (marker < 0) return { primary: baseItem(name, "lineage", linesToHtml(descriptionSentences(body)), { identifier: { value: slugify(name) } }, LINEAGE_ICON), related: [] };

@@ -53,7 +53,27 @@ by rubble or uneven stone.`);
     expect(result.related[0].system.description.value).toBe("<p>You gain proficiency in History checks related to stonework and mountains.</p>");
   });
 
-  it("does not split coincidental capitalized sentence fragments into lineage traits", () => {
+  it("singularizes Centaurs lineage and parses Large size plus 40-foot speed", () => {
+    const result = parseInput("lineage", `CENTAURS
+Centaurs combine equine strength with humanoid skill.
+Centaur Lineage Traits
+Age. Centaurs mature at the same rate as humans.
+Size. Your size is Large.
+Speed. Your base walking speed is 40 feet.
+Equine Build. You count as one size larger when determining carrying capacity.`);
+    expect(result.primary.name).toBe("Centaur");
+    expect(result.primary.system.identifier.value).toBe("centaur");
+    expect(result.primary.system.description.value).toContain("<h4>Centaur Lineage Traits</h4>");
+    expect(result.primary.system.description.value).toContain("<em><strong>Size.</strong></em> Your size is Large.");
+    expect(result.primary.system.description.value).toContain("<em><strong>Speed.</strong></em> Your base walking speed is 40 feet.");
+    expect(result.primary.system.advancement.bfeSize000000000.configuration.options).toEqual(["large"]);
+    expect(result.primary.system.advancement.bfeSpeed00000000.type).toBe("property");
+    expect(result.primary.system.advancement.bfeSpeed00000000.hint).toBe("Speed. Your base walking speed is 40 feet.");
+    expect(result.primary.system.advancement.bfeSpeed00000000.configuration.changes).toEqual([{ key: "system.traits.movement.base", mode: 5, value: "40" }]);
+    expect(result.related.map(i => i.name)).toEqual(["Equine Build"]);
+  });
+
+  it("does not add speed advancement for default 30-foot lineage speed", () => {
     const result = parseInput("lineage", `dryad
 Dryads are forest spirits.
 Dryad Lineage Traits
@@ -69,6 +89,7 @@ also applies to Plants.
 Tree Step. You can use 15 feet of your movement to step
 into one living tree within your reach.`);
     expect(result.related.map(i => i.name)).toEqual(["Natural Magic", "Tree Step"]);
+    expect(result.primary.system.advancement.bfeSpeed00000000).toBeUndefined();
     expect(result.primary.system.description.value).toContain("Beasts and Plants. This works like the speak with animals spell");
     expect(result.primary.system.description.value).not.toContain("<em><strong>Plants.</strong></em>");
   });
