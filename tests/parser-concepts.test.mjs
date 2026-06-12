@@ -173,6 +173,28 @@ as though it were solid ground.`);
     expect(result.primary.system.advancement.bfeLanguages0000.hint).toBe("You can speak, read, and write Common and Auran.");
   });
 
+  it("adds default Languages advancement for Zobecker heritage when PDF omits Languages trait", () => {
+    const result = parseInput("heritage", `ZOBECKER
+You grew up on the Crossroads in the Free City of
+Zobeck. Those raised here value two things above all
+else: commerce and freedom.
+Commercial Mind. When you are haggling, bartering, or
+shopping, you have advantage on checks made to get a
+better deal or to tell if someone is attempting to rip you off.
+Defiant. When you fail an INT, WIS, or CHA save, you can
+reroll. You must take the next result. Once you use this
+feature, you cannot do so again until you finish a short or
+long rest.`);
+    const description = result.primary.system.description.value;
+    expect(result.primary.name).toBe("Zobecker");
+    expect(result.related.map(i => i.name)).toEqual(["Commercial Mind", "Defiant"]);
+    expect(description).toContain("<em><strong>Languages.</strong></em> You know Common and one additional language of your choice.");
+    expect(result.primary.system.advancement.bfeLanguages0000.type).toBe("trait");
+    expect(result.primary.system.advancement.bfeLanguages0000.configuration.grants).toEqual(["languages:standard:common"]);
+    expect(result.primary.system.advancement.bfeLanguages0000.level.value).toBe(0);
+    expect(result.primary.system.advancement.bfeLanguages0000.hint).toBe("You know Common and one additional language of your choice.");
+  });
+
   it("parses Pine Scion style three-word heritage trait headings", () => {
     const result = parseInput("heritage", `pine scion
 Pine scion heritage characters carry the best aspects of

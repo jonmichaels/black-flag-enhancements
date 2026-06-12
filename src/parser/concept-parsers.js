@@ -3,6 +3,7 @@ import { commonTraitEnhancement } from "./common-traits.js";
 
 const LINEAGE_TRAIT_SKIP = new Set(["age", "size", "speed"]);
 const HERITAGE_LANGUAGE_ADVANCEMENT_ID = "bfeLanguages0000";
+const DEFAULT_HERITAGE_LANGUAGE_TEXT = "You know Common and one additional language of your choice.";
 
 function toTitleCase(value = "") {
   return String(value).trim().toLowerCase().replace(/\b[\p{L}\p{N}'’]+/gu, word => word.charAt(0).toUpperCase() + word.slice(1));
@@ -260,7 +261,7 @@ function parseNaturalAdaptationChoices(trait) {
   return { html, relatedTraits };
 }
 
-function parseTraitSection({ name, type, before, traitLines, category, skippedTraits = new Set(), header = null, img = "icons/svg/book.svg", extraAdvancement = () => null, maxTraitWords = 4, extraTraitHtml = null, extraRelatedTraits = [] }) {
+function parseTraitSection({ name, type, before, traitLines, category, skippedTraits = new Set(), header = null, img = "icons/svg/book.svg", extraAdvancement = () => null, maxTraitWords = 4, extraTraitHtml = null, extraRelatedTraits = [], fallbackTraits = [] }) {
   const traits = splitTraits(traitLines, { maxWords: maxTraitWords });
   if (extraTraitHtml) attachTraitHtml(traits, extraTraitHtml.traitName, extraTraitHtml.html);
   const related = [];
@@ -289,6 +290,14 @@ function parseTraitSection({ name, type, before, traitLines, category, skippedTr
         related.push(featureItem(trait, name, category));
       }
     }
+  }
+  for (const trait of fallbackTraits) {
+    const key = trait.name.toLowerCase();
+    if (traits.some(existing => existing.name.toLowerCase() === key)) continue;
+    const extra = extraAdvancement(trait);
+    if (extra && !advancement[extra._id]) advancement[extra._id] = extra;
+    traitBlocks.push(traitHtml(trait));
+    if (!skippedTraits.has(key)) related.push(featureItem(trait, name, category));
   }
   for (const trait of extraRelatedTraits) {
     related.push(featureItem(trait, name, category));
@@ -345,7 +354,8 @@ export function parseHeritage(input) {
     maxTraitWords: 3,
     img: HERITAGE_ICON,
     extraTraitHtml: { traitName: "Beneficial Mutation", html: mutationHtml },
-    extraRelatedTraits: mutationTraits
+    extraRelatedTraits: mutationTraits,
+    fallbackTraits: [{ name: "Languages", text: DEFAULT_HERITAGE_LANGUAGE_TEXT, lines: [DEFAULT_HERITAGE_LANGUAGE_TEXT] }]
   });
 }
 
