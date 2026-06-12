@@ -459,6 +459,27 @@ d8 Adventuring Motivation
     expect(item.flags["black-flag-enhancements"].talentNames).toEqual(["Opportunist", "Quick", "Scrutinous"]);
   });
 
+  it("parses Envoy of Winter other tool or instrument choice", () => {
+    const item = parseInput("background", `ENVOY OF WINTER
+A herald of the Winter’s Kiss, you have worked to further influence.
+Skill Proficiencies: Choose two from Deception, History,
+Intimidation, or Persuasion.
+Additional Proficiencies: Gain proficiency with charlatan
+tools and one other tool or instrument of your choice.
+TALENT
+Choose a talent from the following list
+to represent your fey cunning: Bottomless Luck, Polyglot,
+or Psycanist.
+ADVENTURING MOTIVATION
+d8 Adventuring Motivation
+1 Adventuring allows me to keep eyes and ears in far flung places.`).primary;
+    expect(item.name).toBe("Envoy Of Winter");
+    expect(item.system.advancement.bfeAdditional000.hint).toBe("Gain proficiency with charlatan tools and one other tool or instrument of your choice.");
+    expect(item.system.advancement.bfeAdditional000.configuration.grants).toEqual(["tools:charlatan"]);
+    expect(item.system.advancement.bfeAdditional000.configuration.choices).toEqual([{ count: 1, pool: ["tools:*", "tools:musicalInstrument:*"] }]);
+    expect(item.flags["black-flag-enhancements"].talentNames).toEqual(["Bottomless Luck", "Polyglot", "Psycanist"]);
+  });
+
   it("parses background equipment options and OR choices", () => {
     const item = parseInput("background", `SOLDIER
 You spent a significant amount of time risking your life to defend others.
