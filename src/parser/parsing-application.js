@@ -62,6 +62,48 @@ function isConceptWithFeatures(type) {
   return ["lineage", "heritage"].includes(type);
 }
 
+function backgroundTalentNames(primary) {
+  return primary?.flags?.[MODULE_ID]?.talentNames ?? primary?.flags?.["black-flag-enhancements"]?.talentNames ?? [];
+}
+
+function sortTalentPacks(packs) {
+  return [...packs].sort((a, b) => {
+    const aid = `${a.collection} ${a.title}`.toLowerCase();
+    const bid = `${b.collection} ${b.title}`.toLowerCase();
+    const rank = id => id.includes("tov") || id.includes("player") ? 0 : id.includes("bfrd") || id.includes("black-flag") ? 1 : 2;
+    return rank(aid) - rank(bid);
+  });
+}
+
+async function resolveTalentPool(talentNames = []) {
+  const names = talentNames.map(name => String(name || "").trim()).filter(Boolean);
+  if (!names.length) return [];
+  const wanted = new Map(names.map(name => [name.toLowerCase(), name]));
+  const matches = new Map();
+  const packs = sortTalentPacks(game.packs.filter(pack => pack.documentName === "Item"));
+  for (const pack of packs) {
+    const id = `${pack.collection} ${pack.title}`.toLowerCase();
+    if (!/(tov|player|bfrd|black-flag)/.test(id)) continue;
+    const index = await pack.getIndex({ fields: ["name", "type"] });
+    for (const entry of index) {
+      const key = String(entry.name || "").toLowerCase();
+      if (!wanted.has(key) || matches.has(key)) continue;
+      if (entry.type && entry.type !== "talent") continue;
+      matches.set(key, { uuid: `Compendium.${pack.collection}.Item.${entry._id}` });
+    }
+    if (matches.size === wanted.size) break;
+  }
+  return names.map(name => matches.get(name.toLowerCase())).filter(Boolean);
+}
+
+async function populateBackgroundTalentPool(primary) {
+  if (primary.type !== "background") return;
+  const advancement = primary.system?.advancement?.bfeTalent000000;
+  if (!advancement) return;
+  const pool = await resolveTalentPool(backgroundTalentNames(primary));
+  if (pool.length) advancement.configuration.pool = pool;
+}
+
 function packFolders(pack) {
   return Array.from(pack?.folders ?? []);
 }
@@ -222,6 +264,7 @@ export class ParsingApplication extends HandlebarsApplicationMixin(ApplicationV2
         type: "grantFeatures"
       };
     }
+    await populateBackgroundTalentPool(primary);
     const [createdPrimary] = await Item.createDocuments([{ ...primary, folder: primaryFolder }], { pack: packId });
     return createdPrimary;
   }

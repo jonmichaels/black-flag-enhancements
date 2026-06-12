@@ -280,8 +280,9 @@ d8 Adventuring Motivation
     expect(item.type).toBe("background");
     expect(item.name).toBe("Vampire Hunter");
     expect(item.img).toBe("systems/black-flag/artwork/types/background.svg");
-    expect(html).toContain("<p>You trained and worked within a troupe of vampire hunters.</p>");
-    expect(html).toContain("<p>You learned how to detect the presence of a vampire in a community, how to track it to its lair, and how to destroy it utterly.</p>");
+    expect(item.system.description.short).toBe("You trained and worked within a troupe of vampire hunters. You learned how to detect the presence of a vampire in a community, how to track it to its lair, and how to destroy it utterly.");
+    expect(html).not.toContain("<p>You trained and worked within a troupe of vampire hunters.</p>");
+    expect(html).not.toContain("<p>You learned how to detect the presence of a vampire");
     expect(html).toContain("<p>And you learned that vampire hunters live short, violent lives.</p>");
     expect(html).toContain("<p><em><strong>Skill Proficiencies:</strong></em> Choose two from History, Insight, Investigation, or Sleight of Hand.</p>");
     expect(html).toContain("<p><em><strong>Additional Proficiencies:</strong></em> Learn one additional language of your choice and gain proficiency with trapper tools.</p>");
@@ -292,6 +293,16 @@ d8 Adventuring Motivation
     expect(html).toContain("<table><thead><tr><th>d8</th><th>Adventuring Motivation</th></tr></thead><tbody>");
     expect(html).toContain("<td>1</td><td>Any dead monster is a good monster, vampire or no. Adventuring gets that done.</td>");
     expect(html).toContain("<td>2</td><td>I honor my trainer by continuing this work in the course of adventuring.</td>");
+    expect(item.system.advancement.bfeSkillProfs000.type).toBe("trait");
+    expect(item.system.advancement.bfeSkillProfs000.hint).toBe("Choose two from History, Insight, Investigation, or Sleight of Hand.");
+    expect(item.system.advancement.bfeSkillProfs000.configuration.choices).toEqual([{ count: 2, pool: ["skills:history", "skills:insight", "skills:investigation", "skills:sleightOfHand"] }]);
+    expect(item.system.advancement.bfeAdditional000.hint).toBe("Learn one additional language of your choice and gain proficiency with trapper tools.");
+    expect(item.system.advancement.bfeAdditional000.configuration.choices).toEqual([{ count: 1, pool: ["languages:*"] }]);
+    expect(item.system.advancement.bfeAdditional000.configuration.grants).toEqual(["tools:trapper"]);
+    expect(item.system.advancement.bfeTalent000000.hint).toBe("You have received special training combined with some natural ability to make you a crack vampire hunter. Choose a talent from this list to represent your experience: Covert, Critical Training, or Spell Duelist.");
+    expect(item.system.advancement.bfeTalent000000.configuration.choices).toEqual({ 0: { count: 1 } });
+    expect(item.system.advancement.bfeTalent000000.configuration.type).toBe("talent");
+    expect(item.flags["black-flag-enhancements"].talentNames).toEqual(["Covert", "Critical Training", "Spell Duelist"]);
   });
 
   it("keeps existing parser types available", () => {

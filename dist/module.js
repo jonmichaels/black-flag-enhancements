@@ -404,6 +404,48 @@ function parseHeritage(input) {
 }
 var BACKGROUND_INLINE_ADVANCEMENTS = ["Skill Proficiencies", "Additional Proficiencies", "Equipment"];
 var BACKGROUND_SECTION_HEADINGS = ["Talent", "Adventuring Motivation"];
+var BACKGROUND_ADVANCEMENT_IDS = {
+  skills: "bfeSkillProfs000",
+  additional: "bfeAdditional000",
+  talent: "bfeTalent000000"
+};
+var SKILL_NAME_KEYS = {
+  acrobatics: "acrobatics",
+  "animal handling": "animalHandling",
+  arcana: "arcana",
+  athletics: "athletics",
+  deception: "deception",
+  history: "history",
+  insight: "insight",
+  intimidation: "intimidation",
+  investigation: "investigation",
+  medicine: "medicine",
+  nature: "nature",
+  perception: "perception",
+  performance: "performance",
+  persuasion: "persuasion",
+  religion: "religion",
+  "sleight of hand": "sleightOfHand",
+  stealth: "stealth",
+  survival: "survival"
+};
+var NUMBER_WORDS = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
+var TOOL_NAME_KEYS = {
+  "trapper tools": "trapper",
+  "thieves' tools": "thieves",
+  "thieves tools": "thieves",
+  "alchemist's tools": "alchemist",
+  "alchemists tools": "alchemist",
+  "artist tools": "artist",
+  "charlatan tools": "charlatan",
+  "clothier tools": "clothier",
+  "construction tools": "construction",
+  "smithing tools": "smithing",
+  "herbalist tools": "herbalist",
+  "navigator tools": "navigator",
+  "provisioner tools": "provisioner",
+  "tinker tools": "tinker"
+};
 function backgroundInlineAdvancement(line = "") {
   for (const label of BACKGROUND_INLINE_ADVANCEMENTS) {
     const match = String(line).match(new RegExp(`^${label}\\s*([:.])\\s*(.*)$`, "i"));
@@ -447,28 +489,107 @@ function flushBackgroundSection(section, htmlParts) {
   const text = normalizeInlineText(section.lines);
   if (text) htmlParts.push(`<p>${escapeHTML(text)}</p>`);
 }
+function numberFromText(text = "", fallback = 1) {
+  const match = String(text).toLowerCase().match(/\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\b/);
+  if (!match) return fallback;
+  return NUMBER_WORDS[match[1]] ?? Number(match[1]) ?? fallback;
+}
+function skillKeysFromText(text = "") {
+  const normalized = String(text).toLowerCase().replace(/\bor\b/g, ",").replace(/\band\b/g, ",");
+  const keys = [];
+  for (const [label, key] of Object.entries(SKILL_NAME_KEYS)) {
+    if (new RegExp(`\\b${label.replace(/ /g, "\\s+")}\\b`, "i").test(normalized)) keys.push(key);
+  }
+  return keys;
+}
+function talentNamesFromText(text = "") {
+  const match = String(text).match(/:\s*([^:.]+?)\.?$/);
+  if (!match) return [];
+  return match[1].split(/,|\bor\b/i).map((part) => toTitleCase(part)).filter(Boolean);
+}
+function toolGrantKeysFromText(text = "") {
+  const normalized = String(text).toLowerCase();
+  const grants = [];
+  for (const [label, key] of Object.entries(TOOL_NAME_KEYS)) {
+    if (new RegExp(`\\b${label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/ /g, "\\s+")}\\b`, "i").test(normalized)) grants.push(`tools:${key}`);
+  }
+  return [...new Set(grants)];
+}
+function backgroundSkillAdvancement(text = "") {
+  const skills = skillKeysFromText(text);
+  return {
+    _id: BACKGROUND_ADVANCEMENT_IDS.skills,
+    configuration: { choiceMode: "inclusive", choices: [{ count: numberFromText(text, 2), pool: skills.map((skill) => `skills:${skill}`) }], grants: [], mode: "default" },
+    flags: {},
+    hint: text,
+    icon: null,
+    level: { value: 0 },
+    title: "Skill Proficiencies",
+    type: "trait"
+  };
+}
+function backgroundAdditionalAdvancement(text = "") {
+  const choices = [];
+  if (/\badditional language\b|\blanguage of your choice\b/i.test(text)) choices.push({ count: numberFromText(text, 1), pool: ["languages:*"] });
+  return {
+    _id: BACKGROUND_ADVANCEMENT_IDS.additional,
+    configuration: { choiceMode: "inclusive", choices, grants: toolGrantKeysFromText(text), mode: "default" },
+    flags: {},
+    hint: text,
+    icon: null,
+    level: { value: 0 },
+    title: "Additional Proficiencies",
+    type: "trait"
+  };
+}
+function backgroundTalentAdvancement(text = "") {
+  return {
+    _id: BACKGROUND_ADVANCEMENT_IDS.talent,
+    configuration: { allowDrops: false, choices: { 0: { count: 1 } }, pool: [], restriction: {}, type: "talent" },
+    flags: {},
+    hint: text,
+    icon: null,
+    level: { value: 0 },
+    title: "Talent",
+    type: "chooseFeatures"
+  };
+}
 function parseBackground(input) {
   const lines = cleanPdfText(input);
   const name = toTitleCase(lines[0] || "Untitled");
   const body = lines.slice(1);
   const htmlParts = [];
+  const advancement = {};
   let intro = [];
   let inline = null;
   let section = null;
+  let descriptionShort = "";
+  let talentNames = [];
   let i = 0;
   const flushIntro = () => {
     if (!intro.length) return;
-    htmlParts.push(linesToHtml(descriptionSentences(intro), { traitStyle: false }));
+    const sentences = descriptionSentences(intro);
+    if (!descriptionShort) {
+      descriptionShort = normalizeInlineText(sentences.slice(0, 2));
+      htmlParts.push(linesToHtml(sentences.slice(2), { traitStyle: false }));
+    } else htmlParts.push(linesToHtml(sentences, { traitStyle: false }));
     intro = [];
   };
   const flushInline = () => {
     if (!inline) return;
     const text = normalizeInlineText(inline.lines);
+    if (inline.label === "Skill Proficiencies") advancement[BACKGROUND_ADVANCEMENT_IDS.skills] = backgroundSkillAdvancement(text);
+    else if (inline.label === "Additional Proficiencies") advancement[BACKGROUND_ADVANCEMENT_IDS.additional] = backgroundAdditionalAdvancement(text);
     const label = `${inline.label}${inline.punctuation}`;
     htmlParts.push(`<p><em><strong>${escapeHTML(label)}</strong></em>${text ? ` ${escapeHTML(text)}` : ""}</p>`);
     inline = null;
   };
   const flushSection = () => {
+    if (section?.heading === "Talent") {
+      const text = normalizeInlineText(section.lines);
+      advancement[BACKGROUND_ADVANCEMENT_IDS.talent] = backgroundTalentAdvancement(text);
+      talentNames = talentNamesFromText(text);
+    }
     flushBackgroundSection(section, htmlParts);
     section = null;
   };
@@ -498,12 +619,12 @@ function parseBackground(input) {
       i += 1;
       continue;
     }
-    const advancement = backgroundInlineAdvancement(line);
-    if (advancement) {
+    const advancement2 = backgroundInlineAdvancement(line);
+    if (advancement2) {
       flushIntro();
       flushInline();
       flushSection();
-      inline = { ...advancement, lines: advancement.rest ? [advancement.rest] : [] };
+      inline = { ...advancement2, lines: advancement2.rest ? [advancement2.rest] : [] };
     } else if (inline) inline.lines.push(line);
     else if (section) section.lines.push(line);
     else intro.push(line);
@@ -513,7 +634,10 @@ function parseBackground(input) {
   flushInline();
   flushSection();
   const html = htmlParts.filter(Boolean).join("\n");
-  return { primary: baseItem(name, "background", html, { identifier: { value: slugify(name) } }, BACKGROUND_ICON), related: [] };
+  const primary = baseItem(name, "background", html, { advancement, identifier: { value: slugify(name) } }, BACKGROUND_ICON);
+  primary.system.description.short = descriptionShort;
+  primary.flags = { "black-flag-enhancements": { talentNames } };
+  return { primary, related: [] };
 }
 function parseTalent(input) {
   const lines = cleanPdfText(input);
@@ -650,6 +774,44 @@ function applySource(data, source) {
 }
 function isConceptWithFeatures(type) {
   return ["lineage", "heritage"].includes(type);
+}
+function backgroundTalentNames(primary) {
+  return primary?.flags?.[MODULE_ID]?.talentNames ?? primary?.flags?.["black-flag-enhancements"]?.talentNames ?? [];
+}
+function sortTalentPacks(packs) {
+  return [...packs].sort((a, b) => {
+    const aid = `${a.collection} ${a.title}`.toLowerCase();
+    const bid = `${b.collection} ${b.title}`.toLowerCase();
+    const rank = (id) => id.includes("tov") || id.includes("player") ? 0 : id.includes("bfrd") || id.includes("black-flag") ? 1 : 2;
+    return rank(aid) - rank(bid);
+  });
+}
+async function resolveTalentPool(talentNames = []) {
+  const names = talentNames.map((name) => String(name || "").trim()).filter(Boolean);
+  if (!names.length) return [];
+  const wanted = new Map(names.map((name) => [name.toLowerCase(), name]));
+  const matches = /* @__PURE__ */ new Map();
+  const packs = sortTalentPacks(game.packs.filter((pack) => pack.documentName === "Item"));
+  for (const pack of packs) {
+    const id = `${pack.collection} ${pack.title}`.toLowerCase();
+    if (!/(tov|player|bfrd|black-flag)/.test(id)) continue;
+    const index = await pack.getIndex({ fields: ["name", "type"] });
+    for (const entry of index) {
+      const key = String(entry.name || "").toLowerCase();
+      if (!wanted.has(key) || matches.has(key)) continue;
+      if (entry.type && entry.type !== "talent") continue;
+      matches.set(key, { uuid: `Compendium.${pack.collection}.Item.${entry._id}` });
+    }
+    if (matches.size === wanted.size) break;
+  }
+  return names.map((name) => matches.get(name.toLowerCase())).filter(Boolean);
+}
+async function populateBackgroundTalentPool(primary) {
+  if (primary.type !== "background") return;
+  const advancement = primary.system?.advancement?.bfeTalent000000;
+  if (!advancement) return;
+  const pool = await resolveTalentPool(backgroundTalentNames(primary));
+  if (pool.length) advancement.configuration.pool = pool;
 }
 function packFolders(pack) {
   return Array.from(pack?.folders ?? []);
@@ -797,6 +959,7 @@ var ParsingApplication = class _ParsingApplication extends HandlebarsApplication
         type: "grantFeatures"
       };
     }
+    await populateBackgroundTalentPool(primary);
     const [createdPrimary] = await Item.createDocuments([{ ...primary, folder: primaryFolder }], { pack: packId });
     return createdPrimary;
   }
