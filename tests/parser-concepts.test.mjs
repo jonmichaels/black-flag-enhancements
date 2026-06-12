@@ -258,6 +258,49 @@ Retractable Claws. As a bonus action, you can extend or retract claws into your 
     expect(result.primary.system.advancement.bfeLanguages0000.hint).toBe("You know Common and one additional language of your choice. Typical wastelander heritage characters choose Goblin.");
   });
 
+  it("formats Trollkin Natural Adaptation choices as a list and ancestor features", () => {
+    const result = parseInput("lineage", `TROLLKIN
+In ancient times, ogres, trolls, and fey would sometimes
+take humans as mates.
+TROLLKIN LINEAGE TRAITS
+Age. Trollkin reach adulthood by the age of 15, living up to
+60 years.
+Size. Your size is Medium.
+Speed. Your base walking speed is 30 feet.
+Natural Weapons. You have large fangs, stout hooves,
+or sharp claws instead of fingernails and toenails.
+Trollish Regeneration. The regenerative power in your
+blood allows you to quickly recover from wounds.
+Natural Adaptation. You manifest different traits
+depending on your inhuman ancestor. Select one of the
+following at character creation.
+• Ogre. Your body is powerfully built and imposing. You
+have advantage on ability checks and saves made to
+initiate and escape grapples.
+• Troll. You are about as large as Medium size gets, but
+not quite Large. You have advantage on saves against
+the stunned condition.
+• Fey. Your features are beguiling and strange. When you
+make an ability check that uses CHA, you may roll a d6
+and add it to the total. You can use this trait once until
+you finish a long rest.`);
+    const html = result.primary.system.description.value;
+    expect(html).toContain("<em><strong>Natural Adaptation.</strong></em> You manifest different traits depending on your inhuman ancestor. Select one of the following at character creation.");
+    expect(html).toContain("<ul>");
+    expect(html).toContain("<li><strong>Ogre.</strong> Your body is powerfully built and imposing. You have advantage on ability checks and saves made to initiate and escape grapples.</li>");
+    expect(html).toContain("<li><strong>Troll.</strong> You are about as large as Medium size gets, but not quite Large. You have advantage on saves against the stunned condition.</li>");
+    expect(html).toContain("<li><strong>Fey.</strong> Your features are beguiling and strange. When you make an ability check that uses CHA, you may roll a d6 and add it to the total. You can use this trait once until you finish a long rest.</li>");
+    expect(result.related.map(i => i.name)).toEqual([
+      "Natural Weapons",
+      "Trollish Regeneration",
+      "Ogre Ancestor",
+      "Troll Ancestor",
+      "Fey Ancestor"
+    ]);
+    expect(result.related.slice(2).map(i => i.system.type.category)).toEqual(["lineage", "lineage", "lineage"]);
+    expect(result.related.find(i => i.name === "Ogre Ancestor").system.description.value).toBe("<p>Your body is powerfully built and imposing. You have advantage on ability checks and saves made to initiate and escape grapples.</p>");
+  });
+
   it("parses heritage/background/talent as valid Black Flag item types", () => {
     expect(parseInput("heritage", "Aerobat\nYou are at home in high places.\nDescender. You can slow your fall.").primary.type).toBe("heritage");
     expect(parseInput("background", "Vampire Hunter\nYou hunt creatures of the night.\nSkill Proficiencies: Choose two.\nEquipment: A stake.\nTalent: Choose one martial talent.").primary.type).toBe("background");

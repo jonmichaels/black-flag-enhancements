@@ -236,6 +236,30 @@ function traitHtml(trait) {
   return [linesToHtml([traitLine(trait)]), trait.html].filter(Boolean).join("\n");
 }
 
+function parseNaturalAdaptationChoices(trait) {
+  if (!trait || trait.name.toLowerCase() !== "natural adaptation") return null;
+  const choices = [];
+  const introLines = [];
+  let current = null;
+  for (const rawLine of trait.lines ?? []) {
+    const line = String(rawLine || "").trim();
+    const match = line.match(/^[•\-*]\s*(Ogre|Troll|Fey)\.\s*(.*)$/i);
+    if (match) {
+      if (current) choices.push({ ...current, text: normalizeInlineText(current.lines) });
+      current = { name: `${toTitleCase(match[1])} Ancestor`, label: toTitleCase(match[1]), lines: [] };
+      if (match[2]) current.lines.push(match[2]);
+    } else if (current) current.lines.push(line);
+    else introLines.push(line);
+  }
+  if (current) choices.push({ ...current, text: normalizeInlineText(current.lines) });
+  if (!choices.length) return null;
+  const intro = normalizeInlineText(introLines);
+  const list = choices.map(choice => `<li><strong>${escapeHTML(choice.label)}.</strong> ${escapeHTML(choice.text)}</li>`).join("\n");
+  const html = `${linesToHtml([`Natural Adaptation. ${intro}`])}\n<ul>\n${list}\n</ul>`;
+  const relatedTraits = choices.map(choice => ({ name: choice.name, text: choice.text, lines: [choice.text] }));
+  return { html, relatedTraits };
+}
+
 function parseTraitSection({ name, type, before, traitLines, category, skippedTraits = new Set(), header = null, img = "icons/svg/book.svg", extraAdvancement = () => null, maxTraitWords = 4, extraTraitHtml = null, extraRelatedTraits = [] }) {
   const traits = splitTraits(traitLines, { maxWords: maxTraitWords });
   if (extraTraitHtml) attachTraitHtml(traits, extraTraitHtml.traitName, extraTraitHtml.html);
@@ -256,8 +280,14 @@ function parseTraitSection({ name, type, before, traitLines, category, skippedTr
       traitBlocks.push(traitHtml(trait));
     } else if (skippedTraits.has(key)) traitBlocks.push(traitHtml(trait));
     else {
-      traitBlocks.push(traitHtml(trait));
-      related.push(featureItem(trait, name, category));
+      const naturalAdaptation = parseNaturalAdaptationChoices(trait);
+      if (naturalAdaptation) {
+        traitBlocks.push(naturalAdaptation.html);
+        for (const choice of naturalAdaptation.relatedTraits) related.push(featureItem(choice, name, category));
+      } else {
+        traitBlocks.push(traitHtml(trait));
+        related.push(featureItem(trait, name, category));
+      }
     }
   }
   for (const trait of extraRelatedTraits) {
