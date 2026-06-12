@@ -73,6 +73,30 @@ Equine Build. You count as one size larger when determining carrying capacity.`)
     expect(result.related.map(i => i.name)).toEqual(["Equine Build"]);
   });
 
+  it("parses generic Natural Adaptation bullet choices for Sapopova", () => {
+    const result = parseInput("lineage", `Sapopova
+Sapopova are amphibious people.
+Sapopova Lineage Traits
+Age. Sapopova mature quickly.
+Size. Your size is Small.
+Speed. Your base walking speed is 30 feet. You also have a
+swimming speed of 30 feet.
+Amphibian. You can breathe air and water.
+Superior Vision. You have darkvision to a range of 60 feet.
+Natural Adaptation. You have inherited one of the
+following traits, determined by the characteristics you
+want your character to have:
+• Frogkin. Frogkin option text spans
+multiple lines.
+• Toadfolk. Toadfolk option text spans
+multiple lines.`);
+    const description = result.primary.system.description.value;
+    expect(result.related.map(i => i.name)).toEqual(["Amphibian", "Superior Vision", "Frogkin", "Toadfolk"]);
+    expect(description).toContain("<li><strong>Frogkin.</strong> Frogkin option text spans multiple lines.</li>");
+    expect(description).toContain("<li><strong>Toadfolk.</strong> Toadfolk option text spans multiple lines.</li>");
+    expect(result.related.find(i => i.name === "Frogkin").system.description.value).toBe("<p>Frogkin option text spans multiple lines.</p>");
+  });
+
   it("formats Rachisan Natural Adaptation choices and creates feature items", () => {
     const result = parseInput("lineage", `Rachisan
 Rachisans are diminutive humanoids with plant features.
