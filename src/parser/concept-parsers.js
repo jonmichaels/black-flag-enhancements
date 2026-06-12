@@ -58,6 +58,7 @@ const BACKGROUND_ICON = "systems/black-flag/artwork/types/background.svg";
 const FEATURE_ICON = "systems/black-flag/artwork/types/feature.svg";
 const SIZE_ADVANCEMENT_ID = "bfeSize000000000";
 const SPEED_ADVANCEMENT_ID = "bfeSpeed00000000";
+const CLIMB_SPEED_ADVANCEMENT_ID = "bfeClimb00000000";
 const FEATURES_ADVANCEMENT_ID = "bfeFeatures00000";
 
 function baseItem(name, type, html, system = {}, img = "icons/svg/book.svg") {
@@ -145,6 +146,12 @@ function parseSpeedValue(text = "") {
   return Number.isFinite(speed) ? speed : null;
 }
 
+function parseMovementTypeSpeedValue(text = "", type = "") {
+  const match = String(text).match(new RegExp(`\\b(\\d+)\\s*[- ]?(?:feet|foot|ft\\.?)\\s+${type}(?:ing)?\\s+speed\\b`, "i"));
+  const speed = match ? Number(match[1]) : null;
+  return Number.isFinite(speed) ? speed : null;
+}
+
 function speedAdvancement(trait) {
   const speed = parseSpeedValue(trait?.text ?? "");
   if (!speed || speed === 30) return null;
@@ -156,6 +163,21 @@ function speedAdvancement(trait) {
     icon: null,
     level: { value: 0, classIdentifier: "" },
     title: "Speed",
+    type: "property"
+  };
+}
+
+function climbSpeedAdvancement(trait) {
+  const speed = parseMovementTypeSpeedValue(trait?.text ?? "", "climb");
+  if (!speed) return null;
+  return {
+    _id: CLIMB_SPEED_ADVANCEMENT_ID,
+    configuration: { changes: [{ key: "system.traits.movement.types.climb", mode: 5, value: String(speed) }] },
+    flags: {},
+    hint: traitLine(trait),
+    icon: null,
+    level: { value: 0, classIdentifier: "" },
+    title: "Climbing Speed",
     type: "property"
   };
 }
@@ -278,6 +300,8 @@ function parseTraitSection({ name, type, before, traitLines, category, skippedTr
     } else if (key === "speed") {
       const speed = speedAdvancement(trait);
       if (speed) advancement[SPEED_ADVANCEMENT_ID] = speed;
+      const climb = climbSpeedAdvancement(trait);
+      if (climb) advancement[CLIMB_SPEED_ADVANCEMENT_ID] = climb;
       traitBlocks.push(traitHtml(trait));
     } else if (skippedTraits.has(key)) traitBlocks.push(traitHtml(trait));
     else {

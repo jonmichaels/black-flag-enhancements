@@ -73,6 +73,24 @@ Equine Build. You count as one size larger when determining carrying capacity.`)
     expect(result.related.map(i => i.name)).toEqual(["Equine Build"]);
   });
 
+  it("parses Dhampir default walking speed plus 30-foot climbing speed", () => {
+    const result = parseInput("lineage", `Dhampir
+Dhampirs are the improbable children of vampires and humans.
+Dhampir Lineage Traits
+Age. Dhampirs mature in their late teenage years.
+Size. Your size is Medium or Small.
+Speed. Your base walking speed is 30 feet. You also gain
+a 30-foot climbing speed, which you can use to move up
+vertical surfaces, across horizontal surface, and upside
+down along ceilings, while leaving your hands free.
+Darkvision. You have darkvision to a range of 60 feet.`);
+    expect(result.primary.system.advancement.bfeSpeed00000000).toBeUndefined();
+    expect(result.primary.system.advancement.bfeClimb00000000.type).toBe("property");
+    expect(result.primary.system.advancement.bfeClimb00000000.title).toBe("Climbing Speed");
+    expect(result.primary.system.advancement.bfeClimb00000000.configuration.changes).toEqual([{ key: "system.traits.movement.types.climb", mode: 5, value: "30" }]);
+    expect(result.primary.system.description.value).toContain("<em><strong>Speed.</strong></em> Your base walking speed is 30 feet. You also gain a 30-foot climbing speed");
+  });
+
   it("does not add speed advancement for default 30-foot lineage speed", () => {
     const result = parseInput("lineage", `dryad
 Dryads are forest spirits.
