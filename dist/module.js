@@ -405,10 +405,12 @@ function parseNaturalAdaptationChoices(trait) {
   let current = null;
   for (const rawLine of trait.lines ?? []) {
     const line = String(rawLine || "").trim();
-    const match = line.match(/^[•\-*]\s*(Ogre|Troll|Fey)\.\s*(.*)$/i);
+    const match = line.match(/^[•\-*]\s*(Ogre|Troll|Fey|Earthborn|Fireborn|Waterborn|Windborn)\.\s*(.*)$/i);
     if (match) {
       if (current) choices.push({ ...current, text: normalizeInlineText(current.lines) });
-      current = { name: `${toTitleCase(match[1])} Ancestor`, label: toTitleCase(match[1]), lines: [] };
+      const label = toTitleCase(match[1]);
+      const name = /^(Ogre|Troll|Fey)$/i.test(match[1]) ? `${label} Ancestor` : label;
+      current = { name, label, lines: [] };
       if (match[2]) current.lines.push(match[2]);
     } else if (current) current.lines.push(line);
     else introLines.push(line);

@@ -73,6 +73,38 @@ Equine Build. You count as one size larger when determining carrying capacity.`)
     expect(result.related.map(i => i.name)).toEqual(["Equine Build"]);
   });
 
+  it("formats Elemental Scion Natural Adaptation choices and creates feature items", () => {
+    const result = parseInput("lineage", `Elemental Scion
+Elemental scions are infused by primordial powers.
+Elemental Scion Lineage Traits
+Age. Elemental scions typically reach adulthood by 15 years of age.
+Size. Your size is Medium.
+Speed. Your base walking speed is 30 feet.
+Hybrid Humanoid. Your Humanoid body is suffused with elemental energy.
+Natural Adaptation. You have inherited one set of the
+following unique traits, determined by the nature of the
+elemental forces that shaped you:
+• Earthborn. Obvious characteristics reveal your
+connection to elemental earth. You have tremorsense to
+a range of 10 feet.
+• Fireborn. Notable characteristics denote your
+connection to elemental fire. As a bonus action, you can cause
+your body to emit bright light.
+• Waterborn. You possess notable features that show
+your connection to elemental water. You have a swimming
+speed equal to your walking speed and can breathe water.
+• Windborn. Notable characteristics indicate your
+connection to elemental air. You gain a flying speed of
+10 feet, you can hover.`);
+    const description = result.primary.system.description.value;
+    expect(result.related.map(i => i.name)).toEqual(["Hybrid Humanoid", "Earthborn", "Fireborn", "Waterborn", "Windborn"]);
+    expect(description).toContain("<em><strong>Natural Adaptation.</strong></em> You have inherited one set of the following unique traits");
+    expect(description).toContain("<ul>");
+    expect(description).toContain("<li><strong>Earthborn.</strong> Obvious characteristics reveal your connection to elemental earth.");
+    expect(description).toContain("<li><strong>Windborn.</strong> Notable characteristics indicate your connection to elemental air.");
+    expect(result.related.find(i => i.name === "Waterborn").system.description.value).toContain("<p>You possess notable features that show your connection to elemental water.");
+  });
+
   it("formats Dragonborn Draconic Ancestry table and keeps following traits separate", () => {
     const result = parseInput("lineage", `Dragonborn
 Descended from mighty dragons, dragonborn are draconic humanoids.
