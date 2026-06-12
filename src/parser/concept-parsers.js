@@ -85,6 +85,14 @@ function splitTraits(lines, { maxWords = 4 } = {}) {
   let current = null;
   let previousLine = "";
   for (const line of lines) {
+    if (/^Gearforged Components$/i.test(line)) {
+      if (current) {
+        traits.push({ ...current, text: normalizeInlineText(current.lines) });
+        current = null;
+      }
+      previousLine = ".";
+      continue;
+    }
     const match = parseTraitStart(line, { maxWords });
     if (match && (!current || endsSentence(previousLine))) {
       if (current) traits.push({ ...current, text: normalizeInlineText(current.lines) });
@@ -283,14 +291,15 @@ function traitHtml(trait) {
   return [linesToHtml([traitLine(trait)]), trait.html].filter(Boolean).join("\n");
 }
 
-function parseNaturalAdaptationChoices(trait) {
-  if (!trait || trait.name.toLowerCase() !== "natural adaptation") return null;
+function parseChoiceListTrait(trait) {
+  const traitKey = trait?.name.toLowerCase();
+  if (!trait || !["natural adaptation", "upgrade"].includes(traitKey)) return null;
   const choices = [];
   const introLines = [];
   let current = null;
   for (const rawLine of trait.lines ?? []) {
     const line = String(rawLine || "").trim();
-    const match = line.match(/^[•\-*]\s*(Ogre|Troll|Fey|Earthborn|Fireborn|Waterborn|Windborn)\.\s*(.*)$/i);
+    const match = line.match(/^[•\-*]\s*(Ogre|Troll|Fey|Earthborn|Fireborn|Waterborn|Windborn|Always Armed|Bulk Up|Quick Fix)\.\s*(.*)$/i);
     if (match) {
       if (current) choices.push({ ...current, text: normalizeInlineText(current.lines) });
       const label = toTitleCase(match[1]);
@@ -304,7 +313,7 @@ function parseNaturalAdaptationChoices(trait) {
   if (!choices.length) return null;
   const intro = normalizeInlineText(introLines);
   const list = choices.map(choice => `<li><strong>${escapeHTML(choice.label)}.</strong> ${escapeHTML(choice.text)}</li>`).join("\n");
-  const html = `${linesToHtml([`Natural Adaptation. ${intro}`])}\n<ul>\n${list}\n</ul>`;
+  const html = `${linesToHtml([`${trait.name}. ${intro}`])}\n<ul>\n${list}\n</ul>`;
   const relatedTraits = choices.map(choice => ({ name: choice.name, text: choice.text, lines: [choice.text] }));
   return { html, relatedTraits };
 }
@@ -331,10 +340,10 @@ function parseTraitSection({ name, type, before, traitLines, category, skippedTr
       traitBlocks.push(traitHtml(trait));
     } else if (skippedTraits.has(key)) traitBlocks.push(traitHtml(trait));
     else {
-      const naturalAdaptation = parseNaturalAdaptationChoices(trait);
-      if (naturalAdaptation) {
-        traitBlocks.push(naturalAdaptation.html);
-        for (const choice of naturalAdaptation.relatedTraits) related.push(featureItem(choice, name, category));
+      const choiceList = parseChoiceListTrait(trait);
+      if (choiceList) {
+        traitBlocks.push(choiceList.html);
+        for (const choice of choiceList.relatedTraits) related.push(featureItem(choice, name, category));
       } else {
         traitBlocks.push(traitHtml(trait));
         related.push(featureItem(trait, name, category));

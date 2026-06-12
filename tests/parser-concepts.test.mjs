@@ -73,6 +73,38 @@ Equine Build. You count as one size larger when determining carrying capacity.`)
     expect(result.related.map(i => i.name)).toEqual(["Equine Build"]);
   });
 
+  it("formats Gearforged Upgrade choices and keeps components separate", () => {
+    const result = parseInput("lineage", `Gearforged
+Gearforged are living minds inside mechanical bodies.
+Gearforged Lineage Traits
+Age. The soul inhabiting a gearforged can be any age.
+Size. Your size is Medium or Small.
+Speed. Your base walking speed is 30 feet.
+Constructed Vitality. You don't need to eat, drink, or breathe.
+Hybrid Humanoid. Your Humanoid soul inhabits a machine.
+Machine Speech. You can speak and understand Machine Speech.
+Upgrade. Choose one of the following traits to represent a
+specialized function built into your chassis:
+• Always Armed. You can integrate a melee weapon into
+each of your arms.
+• Bulk Up. As a bonus action, you can activate special gears
+to temporarily increase your size to Large.
+• Quick Fix. When you are below half your hit point
+maximum, you can use a bonus action to patch your body.
+Gearforged Components
+Everwound Springs. These magical springs provide
+energy over long periods.
+Memory Gears. These delicate constructions hold memories.
+Soul Gem. The animating principle is retained in a soul gem.`);
+    const description = result.primary.system.description.value;
+    expect(result.related.map(i => i.name)).toEqual(["Constructed Vitality", "Hybrid Humanoid", "Machine Speech", "Always Armed", "Bulk Up", "Quick Fix", "Everwound Springs", "Memory Gears", "Soul Gem"]);
+    expect(description).toContain("<em><strong>Upgrade.</strong></em> Choose one of the following traits to represent a specialized function built into your chassis:");
+    expect(description).toContain("<li><strong>Always Armed.</strong> You can integrate a melee weapon into each of your arms.</li>");
+    expect(description).toContain("<li><strong>Quick Fix.</strong> When you are below half your hit point maximum, you can use a bonus action to patch your body.</li>");
+    expect(description).toContain("<em><strong>Everwound Springs.</strong></em> These magical springs provide energy over long periods.");
+    expect(result.related.find(i => i.name === "Bulk Up").system.description.value).toContain("temporarily increase your size to Large");
+  });
+
   it("formats Elemental Scion Natural Adaptation choices and creates feature items", () => {
     const result = parseInput("lineage", `Elemental Scion
 Elemental scions are infused by primordial powers.
