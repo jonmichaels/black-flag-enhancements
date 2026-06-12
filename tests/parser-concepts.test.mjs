@@ -134,6 +134,7 @@ as though it were solid ground.`);
     const description = result.primary.system.description.value;
     expect(result.primary.type).toBe("heritage");
     expect(result.primary.name).toBe("Sky Dancer");
+    expect(result.primary.img).toBe("systems/black-flag/artwork/types/heritage.svg");
     expect(description).toContain("<p>You were raised among cliff dwellers and wind temples.</p>");
     expect(description).toContain("<p>Your people leap before they walk.</p>");
     expect(description).toContain("<em><strong>Glide.</strong></em> You can slow your fall and drift up to 30 feet horizontally. You land safely.");
@@ -146,6 +147,8 @@ as though it were solid ground.`);
     expect(result.related[2].system.description.value).toBe("<p>You can move across mist as though it were solid ground.</p>");
     expect(result.primary.system.advancement.bfeLanguages0000.type).toBe("trait");
     expect(result.primary.system.advancement.bfeLanguages0000.title).toBe("Languages");
+    expect(result.primary.system.advancement.bfeLanguages0000.configuration.grants).toEqual(["languages:standard:common"]);
+    expect(result.primary.system.advancement.bfeLanguages0000.level.value).toBe(0);
     expect(result.primary.system.advancement.bfeLanguages0000.hint).toBe("You can speak, read, and write Common and Auran.");
   });
 

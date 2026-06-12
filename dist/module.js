@@ -181,6 +181,7 @@ function titleFrom(lines) {
   return { name: idx >= 0 ? lines[idx] : lines[0] || "Untitled", body: lines.slice(idx + 1) };
 }
 var LINEAGE_ICON = "systems/black-flag/artwork/types/lineage.svg";
+var HERITAGE_ICON = "systems/black-flag/artwork/types/heritage.svg";
 var FEATURE_ICON = "systems/black-flag/artwork/types/feature.svg";
 var SIZE_ADVANCEMENT_ID = "bfeSize000000000";
 function baseItem(name, type, html, system = {}, img = "icons/svg/book.svg") {
@@ -257,14 +258,14 @@ function languageAdvancement(trait) {
     _id: HERITAGE_LANGUAGE_ADVANCEMENT_ID,
     configuration: {
       choices: [],
-      grants: [],
+      grants: ["languages:standard:common"],
       mode: "default",
       choiceMode: "inclusive"
     },
     flags: {},
     hint: trait.text,
     icon: null,
-    level: { value: null },
+    level: { value: 0 },
     title: "Languages",
     type: "trait"
   };
@@ -324,7 +325,7 @@ function parseHeritage(input) {
   const name = toTitleCase(lines[0] || "Untitled");
   const body = lines.slice(1);
   const traitStart = findHeritageTraitStart(body);
-  if (traitStart < 0) return { primary: baseItem(name, "heritage", linesToHtml(descriptionSentences(body)), { identifier: { value: slugify(name) } }), related: [] };
+  if (traitStart < 0) return { primary: baseItem(name, "heritage", linesToHtml(descriptionSentences(body)), { identifier: { value: slugify(name) } }, HERITAGE_ICON), related: [] };
   return parseTraitSection({
     name,
     type: "heritage",
@@ -332,7 +333,8 @@ function parseHeritage(input) {
     traitLines: body.slice(traitStart),
     category: "heritage",
     extraAdvancement: languageAdvancement,
-    maxTraitWords: 2
+    maxTraitWords: 2,
+    img: HERITAGE_ICON
   });
 }
 function parseBackground(input) {
