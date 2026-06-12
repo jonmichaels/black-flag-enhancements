@@ -158,6 +158,9 @@ function parseMutationRows(lines = []) {
     } else if (numberOnly) {
       if (current) rows.push({ ...current, text: normalizeInlineText(current.lines) });
       current = { roll: numberOnly[1], lines: [] };
+    } else if (current && parseTraitStart(line, { maxWords: 3 }) && normalizeInlineText(current.lines)) {
+      rows.push({ ...current, text: normalizeInlineText(current.lines) });
+      current = { roll: String(Number(current.roll) + 1), lines: [line] };
     } else if (current) current.lines.push(line);
   }
   if (current) rows.push({ ...current, text: normalizeInlineText(current.lines) });
@@ -171,13 +174,22 @@ function mutationTableHtml(title, lines = []) {
   return `<h5>${escapeHTML(toTitleCase(title))}</h5>\n<table><thead><tr><th>d6</th><th>Mutation</th></tr></thead><tbody>\n${body}\n</tbody></table>`;
 }
 
+function mutationRowTraits(lines = []) {
+  return parseMutationRows(lines).map(row => {
+    const match = parseTraitStart(row.text, { maxWords: 3 });
+    return match ? { name: match.name, text: match.rest, lines: [match.rest] } : { name: `Mutation ${row.roll}`, text: row.text, lines: [row.text] };
+  });
+}
+
 function extractWastelanderMutations(name, lines = []) {
-  if (slugify(name) !== "wastelander") return { traitLines: lines, mutationHtml: "" };
+  if (slugify(name) !== "wastelander") return { traitLines: lines, mutationHtml: "", mutationTraits: [] };
   const marker = lines.findIndex(line => /^wastelander mutations$/i.test(line));
-  if (marker < 0) return { traitLines: lines, mutationHtml: "" };
+  if (marker < 0) return { traitLines: lines, mutationHtml: "", mutationTraits: [] };
+  const mutationLines = lines.slice(marker + 1);
   return {
     traitLines: lines.slice(0, marker),
-    mutationHtml: mutationTableHtml(lines[marker], lines.slice(marker + 1))
+    mutationHtml: mutationTableHtml(lines[marker], mutationLines),
+    mutationTraits: mutationRowTraits(mutationLines)
   };
 }
 
@@ -191,7 +203,7 @@ function traitHtml(trait) {
   return [linesToHtml([traitLine(trait)]), trait.html].filter(Boolean).join("\n");
 }
 
-function parseTraitSection({ name, type, before, traitLines, category, skippedTraits = new Set(), header = null, img = "icons/svg/book.svg", extraAdvancement = () => null, maxTraitWords = 4, extraTraitHtml = null }) {
+function parseTraitSection({ name, type, before, traitLines, category, skippedTraits = new Set(), header = null, img = "icons/svg/book.svg", extraAdvancement = () => null, maxTraitWords = 4, extraTraitHtml = null, extraRelatedTraits = [] }) {
   const traits = splitTraits(traitLines, { maxWords: maxTraitWords });
   if (extraTraitHtml) attachTraitHtml(traits, extraTraitHtml.traitName, extraTraitHtml.html);
   const related = [];
@@ -210,6 +222,9 @@ function parseTraitSection({ name, type, before, traitLines, category, skippedTr
       traitBlocks.push(traitHtml(trait));
       related.push(featureItem(trait, name, category));
     }
+  }
+  for (const trait of extraRelatedTraits) {
+    related.push(featureItem(trait, name, category));
   }
   const htmlParts = [linesToHtml(descriptionSentences(before))];
   if (header) htmlParts.push(`<h4>${escapeHTML(header)}</h4>`);
@@ -251,7 +266,7 @@ export function parseHeritage(input) {
   const body = lines.slice(1);
   const traitStart = findHeritageTraitStart(body);
   if (traitStart < 0) return { primary: baseItem(name, "heritage", linesToHtml(descriptionSentences(body)), { identifier: { value: slugify(name) } }, HERITAGE_ICON), related: [] };
-  const { traitLines, mutationHtml } = extractWastelanderMutations(name, body.slice(traitStart));
+  const { traitLines, mutationHtml, mutationTraits } = extractWastelanderMutations(name, body.slice(traitStart));
   return parseTraitSection({
     name,
     type: "heritage",
@@ -262,7 +277,8 @@ export function parseHeritage(input) {
     extraAdvancement: languageAdvancement,
     maxTraitWords: 3,
     img: HERITAGE_ICON,
-    extraTraitHtml: { traitName: "Beneficial Mutation", html: mutationHtml }
+    extraTraitHtml: { traitName: "Beneficial Mutation", html: mutationHtml },
+    extraRelatedTraits: mutationTraits
   });
 }
 

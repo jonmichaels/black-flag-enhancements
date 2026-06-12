@@ -185,7 +185,7 @@ You resist heat.`);
     expect(result.primary.system.description.value).toContain("<p>This phrase should remain description until a short trait begins.</p>");
   });
 
-  it("keeps Wastelander Mutations table with Beneficial Mutation and out of separate feature parsing", () => {
+  it("keeps Wastelander Mutations table with Beneficial Mutation and creates mutation features", () => {
     const result = parseInput("heritage", `WASTELANDER
 Wastelander heritage characters have been raised to survive
 in hostile, magically blasted wastes. They are tough as old
@@ -212,11 +212,26 @@ Retractable Claws. As a bonus action, you can extend or retract claws into your 
 5 Radiation Eater. You have advantage on saves against being poisoned, and you are resistant to poison damage.
 6 Thickened Skin. You are resistant to acid, cold, fire, or lightning damage.`);
     expect(result.primary.name).toBe("Wastelander");
-    expect(result.related.map(i => i.name)).toEqual(["Beneficial Mutation", "Slow Metabolism", "Sufficiency"]);
+    expect(result.related.map(i => i.name)).toEqual([
+      "Beneficial Mutation",
+      "Slow Metabolism",
+      "Sufficiency",
+      "Alien Mind",
+      "Retractable Claws",
+      "Long Limbs",
+      "Temblor",
+      "Radiation Eater",
+      "Thickened Skin"
+    ]);
     expect(result.related[0].system.description.value).toContain("<h5>Wastelander Mutations</h5>");
     expect(result.related[0].system.description.value).toContain("<td>1</td>");
     expect(result.related[0].system.description.value).toContain("Alien Mind. You have advantage on saves against being charmed");
     expect(result.related[0].system.description.value).toContain("Retractable Claws. As a bonus action");
+    const retractableClaws = result.related.find(i => i.name === "Retractable Claws");
+    expect(retractableClaws.system.description.value).toContain("As a bonus action, you can extend or retract claws into your fingertips.");
+    expect(retractableClaws.system.type.category).toBe("heritage");
+    expect(retractableClaws.system.identifier.associated).toBe("wastelander");
+    expect(retractableClaws.system.identifier.value).toBe("retractable-claws");
     expect(result.primary.system.description.value).toContain("<h5>Wastelander Mutations</h5>");
     expect(result.primary.system.description.value).not.toContain("<em><strong>Wastelander Mutations.</strong></em>");
     expect(result.primary.system.advancement.bfeLanguages0000.hint).toBe("You know Common and one additional language of your choice. Typical wastelander heritage characters choose Goblin.");
