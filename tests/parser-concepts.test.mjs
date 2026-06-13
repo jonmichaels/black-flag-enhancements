@@ -94,6 +94,10 @@ multiple lines.`);
     expect(result.related.map(i => i.name)).toEqual(["Amphibian", "Superior Vision", "Frogkin", "Toadfolk"]);
     expect(description).toContain("<li><strong>Frogkin.</strong> Frogkin option text spans multiple lines.</li>");
     expect(description).toContain("<li><strong>Toadfolk.</strong> Toadfolk option text spans multiple lines.</li>");
+    expect(result.primary.system.advancement.bfeSpeed00000000).toBeUndefined();
+    expect(result.primary.system.advancement.bfeSwim000000000.type).toBe("property");
+    expect(result.primary.system.advancement.bfeSwim000000000.title).toBe("Swimming Speed");
+    expect(result.primary.system.advancement.bfeSwim000000000.configuration.changes).toEqual([{ key: "system.traits.movement.types.swim", mode: 5, value: "30" }]);
     expect(result.related.find(i => i.name === "Frogkin").system.description.value).toBe("<p>Frogkin option text spans multiple lines.</p>");
   });
 

@@ -195,6 +195,7 @@ var FEATURE_ICON = "systems/black-flag/artwork/types/feature.svg";
 var SIZE_ADVANCEMENT_ID = "bfeSize000000000";
 var SPEED_ADVANCEMENT_ID = "bfeSpeed00000000";
 var CLIMB_SPEED_ADVANCEMENT_ID = "bfeClimb00000000";
+var SWIM_SPEED_ADVANCEMENT_ID = "bfeSwim000000000";
 function baseItem(name, type, html, system = {}, img = "icons/svg/book.svg") {
   return { name, type, img, system: { description: makeDescription(html), ...system } };
 }
@@ -279,8 +280,11 @@ function parseSpeedValue(text = "") {
   return Number.isFinite(speed) ? speed : null;
 }
 function parseMovementTypeSpeedValue(text = "", type = "") {
-  const match = String(text).match(new RegExp(`\\b(\\d+)\\s*[- ]?(?:feet|foot|ft\\.?)\\s+${type}(?:ing)?\\s+speed\\b`, "i"));
-  const speed = match ? Number(match[1]) : null;
+  const normalized = String(text);
+  const typePattern = type === "swim" ? "swim(?:ming)?" : `${type}(?:ing)?`;
+  const beforeType = normalized.match(new RegExp(`\\b(\\d+)\\s*[- ]?(?:feet|foot|ft\\.?)\\s+${typePattern}\\s+speed\\b`, "i"));
+  const afterType = normalized.match(new RegExp(`\\b${typePattern}\\s+speed\\s+of\\s+(\\d+)\\s*(?:feet|foot|ft\\.?)\\b`, "i"));
+  const speed = Number(beforeType?.[1] ?? afterType?.[1] ?? NaN);
   return Number.isFinite(speed) ? speed : null;
 }
 function speedAdvancement(trait) {
@@ -297,19 +301,25 @@ function speedAdvancement(trait) {
     type: "property"
   };
 }
-function climbSpeedAdvancement(trait) {
-  const speed = parseMovementTypeSpeedValue(trait?.text ?? "", "climb");
+function movementTypeSpeedAdvancement(trait, { type, id, title }) {
+  const speed = parseMovementTypeSpeedValue(trait?.text ?? "", type);
   if (!speed) return null;
   return {
-    _id: CLIMB_SPEED_ADVANCEMENT_ID,
-    configuration: { changes: [{ key: "system.traits.movement.types.climb", mode: 5, value: String(speed) }] },
+    _id: id,
+    configuration: { changes: [{ key: `system.traits.movement.types.${type}`, mode: 5, value: String(speed) }] },
     flags: {},
     hint: traitLine(trait),
     icon: null,
     level: { value: 0, classIdentifier: "" },
-    title: "Climbing Speed",
+    title,
     type: "property"
   };
+}
+function climbSpeedAdvancement(trait) {
+  return movementTypeSpeedAdvancement(trait, { type: "climb", id: CLIMB_SPEED_ADVANCEMENT_ID, title: "Climbing Speed" });
+}
+function swimSpeedAdvancement(trait) {
+  return movementTypeSpeedAdvancement(trait, { type: "swim", id: SWIM_SPEED_ADVANCEMENT_ID, title: "Swimming Speed" });
 }
 function languageAdvancement(trait) {
   if (!trait || !/^languages$/i.test(trait.name)) return null;
@@ -454,6 +464,8 @@ function parseTraitSection({ name, type, before, traitLines, category, skippedTr
       if (speed) advancement[SPEED_ADVANCEMENT_ID] = speed;
       const climb = climbSpeedAdvancement(trait);
       if (climb) advancement[CLIMB_SPEED_ADVANCEMENT_ID] = climb;
+      const swim = swimSpeedAdvancement(trait);
+      if (swim) advancement[SWIM_SPEED_ADVANCEMENT_ID] = swim;
       traitBlocks.push(traitHtml(trait));
     } else if (skippedTraits.has(key)) traitBlocks.push(traitHtml(trait));
     else {
