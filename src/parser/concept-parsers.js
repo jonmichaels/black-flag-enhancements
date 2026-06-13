@@ -114,17 +114,6 @@ function slugify(value = "") {
   return String(value).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
-function featureItem(trait, parentName, category = "lineage") {
-  const enhancement = commonTraitEnhancement(trait);
-  const html = [linesToHtml([trait.text], { traitStyle: false }), trait.html].filter(Boolean).join("\n");
-  return baseItem(trait.name, "feature", html, {
-    identifier: { associated: slugify(parentName), value: slugify(trait.name) },
-    type: { category, value: "" },
-    source: parentName,
-    ...(enhancement.system ?? {})
-  }, enhancement.img ?? FEATURE_ICON);
-}
-
 function parseSizeOptions(text = "") {
   const normalized = String(text).toLowerCase();
   const options = [];
@@ -299,8 +288,59 @@ function attachTraitHtml(traits, traitName, html) {
   if (trait) trait.html = [trait.html, html].filter(Boolean).join("\n");
 }
 
+function formatUnlabeledBulletList(trait, { includeHeading = true } = {}) {
+  const introLines = [];
+  const bullets = [];
+  const outroLines = [];
+  let current = null;
+  let inOutro = false;
+  for (const rawLine of trait.lines ?? []) {
+    const line = String(rawLine || "").trim();
+    const bullet = line.match(/^[•\-*]\s+(.+)$/);
+    if (bullet) {
+      if (current) bullets.push(normalizeInlineText(current));
+      current = [bullet[1]];
+      inOutro = false;
+    } else if (current && !inOutro && /^[a-z]/.test(line)) current.push(line);
+    else if (current) {
+      bullets.push(normalizeInlineText(current));
+      current = null;
+      inOutro = true;
+      if (line) outroLines.push(line);
+    } else if (bullets.length || inOutro) {
+      inOutro = true;
+      if (line) outroLines.push(line);
+    } else if (line) introLines.push(line);
+  }
+  if (current) bullets.push(normalizeInlineText(current));
+  if (!bullets.length) return null;
+  const intro = normalizeInlineText(introLines);
+  const outro = normalizeInlineText(outroLines);
+  const list = bullets.map(item => `<li>${escapeHTML(item)}</li>`).join("\n");
+  return [
+    intro ? linesToHtml([includeHeading ? `${trait.name}. ${intro}` : intro], { traitStyle: includeHeading }) : "",
+    `<ul>\n${list}\n</ul>`,
+    outro ? linesToHtml([outro], { traitStyle: false }) : ""
+  ].filter(Boolean).join("\n");
+}
+
+function traitBodyHtml(trait) {
+  return formatUnlabeledBulletList(trait) ?? linesToHtml([traitLine(trait)]);
+}
+
 function traitHtml(trait) {
-  return [linesToHtml([traitLine(trait)]), trait.html].filter(Boolean).join("\n");
+  return [traitBodyHtml(trait), trait.html].filter(Boolean).join("\n");
+}
+
+function featureItem(trait, parentName, category = "lineage") {
+  const enhancement = commonTraitEnhancement(trait);
+  const html = [formatUnlabeledBulletList(trait, { includeHeading: false }) ?? linesToHtml([trait.text], { traitStyle: false }), trait.html].filter(Boolean).join("\n");
+  return baseItem(trait.name, "feature", html, {
+    identifier: { associated: slugify(parentName), value: slugify(trait.name) },
+    type: { category, value: "" },
+    source: parentName,
+    ...(enhancement.system ?? {})
+  }, enhancement.img ?? FEATURE_ICON);
 }
 
 function parseChoiceListTrait(trait) {

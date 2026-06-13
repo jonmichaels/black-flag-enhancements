@@ -101,6 +101,36 @@ multiple lines.`);
     expect(result.related.find(i => i.name === "Frogkin").system.description.value).toBe("<p>Frogkin option text spans multiple lines.</p>");
   });
 
+  it("formats unlabeled bullets inside Shade Phantasmal Form as a list", () => {
+    const result = parseInput("lineage", `Shade
+Shades are caught between life and death.
+Shade Lineage Traits
+Age. Shades appear as the age they were at death.
+Size. Your size is Medium or Small.
+Speed. Your speed is determined by your living form.
+Hybrid Humanoid. You are a Humanoid, but your partial transition into undeath gives you traits in common with Undead.
+Phantasmal Form. As an action, you can temporarily dissolve your physical body and assume a ghostly form. You also gain the following abilities:
+• You are resistant to bludgeoning, piercing, and slashing
+ damage from nonmagical attacks.
+• You can move through spaces occupied by creatures and
+ solid objects as if they were difficult terrain.
+• You gain a flying speed of 30 feet with the ability to hover.
+• You have advantage on ability checks and saves made to
+ escape a grapple or against being restrained.
+Once you use this feature, you can't transform again until you finish a long rest.
+Spectral Sight. You have darkvision to a range of 60 feet.`);
+    const description = result.primary.system.description.value;
+    const phantasmal = result.related.find(i => i.name === "Phantasmal Form");
+    expect(result.related.map(i => i.name)).toEqual(["Hybrid Humanoid", "Phantasmal Form", "Spectral Sight"]);
+    expect(description).toContain("<em><strong>Phantasmal Form.</strong></em> As an action, you can temporarily dissolve your physical body and assume a ghostly form.");
+    expect(description).toContain("<ul>");
+    expect(description).toContain("<li>You are resistant to bludgeoning, piercing, and slashing damage from nonmagical attacks.</li>");
+    expect(description).toContain("<li>You gain a flying speed of 30 feet with the ability to hover.</li>");
+    expect(description).toContain("Once you use this feature, you can&#39;t transform again until you finish a long rest.");
+    expect(phantasmal.system.description.value).toContain("<ul>");
+    expect(phantasmal.system.description.value).toContain("<li>You can move through spaces occupied by creatures and solid objects as if they were difficult terrain.</li>");
+  });
+
   it("formats Rachisan Natural Adaptation choices and creates feature items", () => {
     const result = parseInput("lineage", `Rachisan
 Rachisans are diminutive humanoids with plant features.
